@@ -2,6 +2,11 @@
 
 These apply to humans and coding agents alike. They encode PRD section 2.7 (modularity).
 
+## Start here
+
+Read `docs/NEXT_STEPS.md` first: current state, decisions already taken by the owner, and
+the next task. Update it at the end of every session.
+
 ## Commands
 
 - Setup: `python -m venv .venv && .venv\Scripts\python -m pip install -e ".[dev]"`
