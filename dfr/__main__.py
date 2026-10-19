@@ -1,5 +1,6 @@
-"""Command-line entry point: ``python -m dfr [status|demo|analyze ...]``.
+"""Command-line entry point: ``python -m dfr [status|demo|analyze|gui ...]``.
 
+``gui``     opens the desktop application (needs the ``gui`` extra: PySide6).
 ``status``  lists discovered modules and the pipeline the orchestrator would build.
 ``demo``    runs one Tier 1 analysis on a tiny in-memory design (no topology).
 ``analyze`` imports a BOM + netlist, matches the selected topology, auto-confirms the
@@ -213,6 +214,15 @@ def _print_derating(rows: list[DeratingResult], parts: dict[int | None, Part]) -
         )
 
 
+def cmd_gui(db: str | None) -> int:
+    try:
+        from dfr.ui.shell.app import run_gui  # noqa: PLC0415 - optional dependency
+    except ImportError:
+        print('The GUI needs PySide6: pip install -e ".[gui]"')
+        return 2
+    return run_gui(Path(db) if db else None)
+
+
 def _num(x: float | None) -> str:
     return f"{x:>10.4g}" if x is not None else f"{'-':>10}"
 
@@ -247,6 +257,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("status")
     sub.add_parser("demo")
+    gui = sub.add_parser("gui")
+    gui.add_argument("--db", default=None)
     an = sub.add_parser("analyze")
     an.add_argument("--bom", required=True)
     an.add_argument("--netlist", required=True)
@@ -265,6 +277,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_demo()
     if args.command == "analyze":
         return cmd_analyze(args)
+    if args.command == "gui":
+        return cmd_gui(args.db)
     return cmd_status()
 
 

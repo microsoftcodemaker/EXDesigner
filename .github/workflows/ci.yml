@@ -35,8 +35,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install -e ".[dev,gui]"
       - run: pytest --cov --cov-report=term-missing --cov-report=xml
+        env:
+          QT_QPA_PLATFORM: offscreen
       - uses: actions/upload-artifact@v4
         if: matrix.python-version == '3.12'
         with:
@@ -53,7 +55,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
       - run: python -c "import importlib.util, sys; sys.exit(1 if importlib.util.find_spec('PySide6') else 0)"
-      - run: pytest -m "not gui" --ignore=dfr/ui
+      - run: pytest -m "not gui" --ignore=dfr/ui --ignore=tests/ui/test_shell_gui.py
 
   subtractive:
     # MOD-03: the suite passes with each optional module folder deleted.

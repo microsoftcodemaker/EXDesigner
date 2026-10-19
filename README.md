@@ -5,15 +5,19 @@ report for power electronics: derating, junction temperature, lifetime, and fail
 every number labelled by source and fidelity tier. See the PRD for scope; this repository is
 built milestone by milestone from it.
 
-**Status:** foundation (PRD tasks T01–T03). Core contracts, registry, database and
-orchestrator exist and are tested; no importer, equations or GUI yet.
+**Status:** Tier 1 engine complete headless (PRD T01–T18): BOM/netlist import, buck topology
+recognition, Tier 1 equations, derating, thermal, immutable runs. GUI shell in progress (T19).
 
 ## Quick start (development)
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\python -m pip install -e ".[dev]"
+.venv\Scripts\python -m pip install -e ".[dev,gui]"
 .venv\Scripts\pytest
+.venv\Scripts\python -m dfr gui            # desktop app (dark Altium-style shell)
+.venv\Scripts\python -m dfr analyze --bom tests/fixtures/design_c/design_c.BomDoc `
+    --netlist tests/fixtures/design_c/design_c_protel.net --topology buck_integrated `
+    --vin-min 8 --vin-max 36 --vout 3.3 --iout 3.25 --fsw 400e3 --ta 40
 ```
 
 Python 3.12+ (tested on 3.12 and 3.14). Set `PYTHONUTF8=1` on Windows consoles so unit symbols
