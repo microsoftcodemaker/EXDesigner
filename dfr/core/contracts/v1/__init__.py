@@ -44,7 +44,13 @@ from dfr.core.contracts.v1.results import (
 )
 from dfr.core.contracts.v1.run import AnalysisRun
 from dfr.core.contracts.v1.spec import ConverterSpec, RunConfig, ValuePrompt
-from dfr.core.contracts.v1.stress import InferredValue, InferredValues, StressKey, StressValue
+from dfr.core.contracts.v1.stress import (
+    InferredValue,
+    InferredValues,
+    StressKey,
+    StressSpec,
+    StressValue,
+)
 from dfr.core.contracts.v1.topology import (
     ConstraintEvidence,
     PatternMatch,
@@ -112,6 +118,7 @@ __all__ = [
     "StageStatus",
     "Stat",
     "StressKey",
+    "StressSpec",
     "StressValue",
     "ThermalResult",
     "Tier",

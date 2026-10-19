@@ -16,7 +16,7 @@ from dfr.core.contracts.v1.diagnostic import Diagnostic
 from dfr.core.contracts.v1.netlist import NetlistGraph
 from dfr.core.contracts.v1.part import Part
 from dfr.core.contracts.v1.results import LifetimeResult, ThermalResult
-from dfr.core.contracts.v1.stress import StressValue
+from dfr.core.contracts.v1.stress import StressSpec, StressValue
 from dfr.core.contracts.v1.topology import PatternMatch, RoleProposal
 
 # --------------------------------------------------------------------------- topologies
@@ -50,8 +50,8 @@ class TopologyTemplate(ABC):
     def validity_checks(self, params: Mapping[str, float]) -> list[Diagnostic]: ...
 
     @abstractmethod
-    def compute(self, params: Mapping[str, float]) -> dict[str, list[StressValue]]:
-        """Return stress values keyed by role."""
+    def compute(self, params: Mapping[str, float]) -> dict[str, list[StressSpec]]:
+        """Return stress specs keyed by role; M2 binds them to parts and stamps provenance."""
 
 
 # --------------------------------------------------------------------------- models

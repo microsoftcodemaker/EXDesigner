@@ -10,10 +10,15 @@ from dfr.topologies.buck.pattern import (
     VARIANT_INTEGRATED,
     BuckPattern,
 )
+from dfr.topologies.buck.template import BuckTemplate
 
 PATTERNS = {
     "buck": BuckPattern(VARIANT_DISCRETE),
     "buck_integrated": BuckPattern(VARIANT_INTEGRATED),
+}
+TEMPLATES = {
+    "buck": BuckTemplate(integrated=False),
+    "buck_integrated": BuckTemplate(integrated=True),
 }
 INFERENCE = {"buck": infer_pin_functions, "buck_integrated": infer_pin_functions}
 
@@ -27,6 +32,7 @@ MODULE = ModuleSpec(
     optional=True,
     services={
         "topology.patterns": lambda: PATTERNS,
+        "topology.templates": lambda: TEMPLATES,
         "topology.inference": lambda: INFERENCE,
     },
 )

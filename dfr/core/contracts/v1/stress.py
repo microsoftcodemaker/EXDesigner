@@ -48,6 +48,25 @@ class StressValue(BaseModel):
         return StressKey(self.part_id, self.param, self.scenario)
 
 
+class StressSpec(BaseModel):
+    """Template output before M2 binds it to a part: no part id, no provenance yet."""
+
+    model_config = ConfigDict(frozen=True)
+
+    param: str
+    value: float
+    unit: str
+    stat: Stat
+    scenario: str
+    note: str | None = None
+
+    @field_validator("unit")
+    @classmethod
+    def _unit_is_known(cls, v: str) -> str:
+        validate_unit(v)
+        return v
+
+
 class InferredValue(BaseModel):
     """A value inferred from the BOM through roles (L, Cout, ESR_eq) with contributing refdes."""
 
