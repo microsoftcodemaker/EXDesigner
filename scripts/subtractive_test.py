@@ -52,7 +52,7 @@ def candidates() -> list[Candidate]:
             dotted = f"dfr.{root.name}.{folder.name}.module"
             try:
                 spec = importlib.import_module(dotted).MODULE
-            except Exception as exc:  # noqa: BLE001 - report and skip, like the registry does
+            except Exception as exc:
                 print(f"skip {folder.relative_to(REPO)}: cannot import ({exc!r})")
                 continue
             found.append(Candidate(folder, spec.id, bool(spec.optional)))
