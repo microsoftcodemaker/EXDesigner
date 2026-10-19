@@ -70,6 +70,7 @@ class ModuleSpec(BaseModel):
     provides: tuple[str, ...] = ()
     optional: bool = True
     step: StepFn | None = None
+    services: dict[str, Callable[..., Any]] = Field(default_factory=dict)
     migrations_path: Path | None = None
     table_prefix: str | None = None
 
@@ -77,3 +78,7 @@ class ModuleSpec(BaseModel):
     def tool_tag(self) -> str:
         """Provenance stamp written on every value this module produces (PRD section 2.5)."""
         return f"{self.id}@{self.version}"
+
+
+class ServiceNotFound(LookupError):
+    """A named service is not provided by any discovered module (the module is absent)."""

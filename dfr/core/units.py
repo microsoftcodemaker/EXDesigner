@@ -17,7 +17,6 @@ _MICRO_ALIASES = {"\u00b5": "u", "\u03bc": "u"}  # MICRO SIGN, GREEK SMALL LETTE
 _SPELLINGS = {
     "degC": "degC",
     "°C": "degC",
-    "C": "degC",  # bare C in a temperature context; callers decide if ambiguous
     "ohm": "ohm",
     "Ohm": "ohm",
     "Ω": "ohm",

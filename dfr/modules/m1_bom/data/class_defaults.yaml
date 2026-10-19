@@ -1,0 +1,24 @@
+# Seed ratings by part class and package. Provenance "seed"; every value carries a source
+# note and is marked verify until checked against a cited datasheet (PRD A3, decision 5).
+# Used only when neither the BOM description nor the local catalog supplies the rating.
+version: 1
+defaults:
+  resistor:
+    "0201": { p_rated: { value: 0.05, unit: W, source: "generic thick-film 0201 (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "0402": { p_rated: { value: 0.0625, unit: W, source: "generic thick-film 0402 1/16 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "0603": { p_rated: { value: 0.1, unit: W, source: "generic thick-film 0603 1/10 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "0805": { p_rated: { value: 0.125, unit: W, source: "generic thick-film 0805 1/8 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "1206": { p_rated: { value: 0.25, unit: W, source: "generic thick-film 1206 1/4 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "2010": { p_rated: { value: 0.75, unit: W, source: "generic thick-film 2010 3/4 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "2512": { p_rated: { value: 1.0, unit: W, source: "generic thick-film 2512 1 W (verify)" }, t_knee: { value: 70, unit: degC, source: "typical derating knee (verify)" } }
+    "*":    { t_max: { value: 155, unit: degC, source: "common thick-film max operating temperature (verify)" } }
+  capacitor:
+    "*": { t_max: { value: 125, unit: degC, source: "X7R upper category temperature (verify)" } }
+  inductor:
+    "*": { t_max: { value: 125, unit: degC, source: "typical power inductor rating (verify)" } }
+  transistor:
+    "*": { tj_max: { value: 150, unit: degC, source: "common silicon MOSFET Tj max (verify)" } }
+  diode:
+    "*": { tj_max: { value: 150, unit: degC, source: "common silicon diode Tj max (verify)" } }
+  ic:
+    "*": { tj_max: { value: 125, unit: degC, source: "common industrial IC Tj max (verify)" } }

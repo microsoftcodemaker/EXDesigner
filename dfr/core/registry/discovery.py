@@ -10,15 +10,17 @@ import importlib.metadata
 import importlib.util
 import os
 import pkgutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 from dfr.core.contracts.v1 import API_VERSION
 from dfr.core.contracts.v1.diagnostic import Diagnostic
 from dfr.core.diagnostics import DiagnosticSink
 from dfr.core.extension import ReportSectionSpec, ScreenSpec
-from dfr.core.registry.spec import ModuleSpec
+from dfr.core.registry.spec import ModuleSpec, ServiceNotFound
 
 MODULE_ATTR = "MODULE"
 SCREENS_ATTR = "SCREENS"
@@ -36,6 +38,16 @@ class DiscoveryResult:
 
     def by_id(self) -> dict[str, ModuleSpec]:
         return {m.id: m for m in self.modules}
+
+    def service(self, name: str) -> Callable[..., Any]:
+        """Look up a service by name across modules; raises ServiceNotFound if absent."""
+        for m in self.modules:
+            if name in m.services:
+                return m.services[name]
+        raise ServiceNotFound(name)
+
+    def has_service(self, name: str) -> bool:
+        return any(name in m.services for m in self.modules)
 
 
 def user_plugin_dir() -> Path:

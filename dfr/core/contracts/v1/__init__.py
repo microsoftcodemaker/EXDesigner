@@ -1,5 +1,6 @@
 """Contract API version 1. Breaking changes go in a new ``v2`` package; v1 stays one release."""
 
+from dfr.core.contracts.v1.bom import BomImportResult, ClassifiedBom
 from dfr.core.contracts.v1.diagnostic import Diagnostic
 from dfr.core.contracts.v1.enums import (
     AutoUserProvenance,
@@ -62,6 +63,8 @@ __all__ = [
     "AnalysisResults",
     "AnalysisRun",
     "AutoUserProvenance",
+    "BomImportResult",
+    "ClassifiedBom",
     "Confidence",
     "ConstraintEvidence",
     "ConverterSpec",

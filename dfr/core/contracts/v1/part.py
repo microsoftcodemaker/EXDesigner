@@ -61,3 +61,4 @@ class Part(BaseModel):
     dnp: bool = False
     class_confidence: float = Field(ge=0.0, le=1.0, default=1.0)
     ratings: RatingSet = Field(default_factory=RatingSet)
+    attributes: dict[str, str] = Field(default_factory=dict)  # dielectric, channel, tolerance...

@@ -8,7 +8,7 @@ from dfr.core.registry.catalog import (
 )
 from dfr.core.registry.discovery import DiscoveryResult, discover, user_plugin_dir
 from dfr.core.registry.pipeline import Pipeline, build_pipeline
-from dfr.core.registry.spec import ModuleSpec, RunContext, StepFn, StepResult
+from dfr.core.registry.spec import ModuleSpec, RunContext, ServiceNotFound, StepFn, StepResult
 
 __all__ = [
     "DiscoveryResult",
@@ -17,6 +17,7 @@ __all__ = [
     "ReportSectionRegistry",
     "RunContext",
     "ScreenRegistry",
+    "ServiceNotFound",
     "SpecRegistry",
     "StepFn",
     "StepResult",

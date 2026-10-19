@@ -11,7 +11,7 @@ from dfr.core.extension import (
     TopologyPattern,
     TopologyTemplate,
 )
-from dfr.core.registry.spec import ModuleSpec, RunContext, StepResult
+from dfr.core.registry.spec import ModuleSpec, RunContext, ServiceNotFound, StepResult
 
 __all__ = [
     "API_VERSION",
@@ -23,6 +23,7 @@ __all__ = [
     "ReportSectionSpec",
     "RunContext",
     "ScreenSpec",
+    "ServiceNotFound",
     "StepResult",
     "TopologyPattern",
     "TopologyTemplate",
