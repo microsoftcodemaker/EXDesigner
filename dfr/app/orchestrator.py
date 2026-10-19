@@ -44,6 +44,13 @@ class RunOutcome:
         return self.run.status is RunStatus.COMPLETED
 
 
+def plan_pipeline(specs: Sequence[ModuleSpec], cfg: RunConfig) -> Pipeline:
+    """The step order the orchestrator would use for ``cfg``; no database needed."""
+    return build_pipeline(
+        specs, enabled=cfg.enabled_modules, initial_capabilities=SEED_CAPABILITIES
+    )
+
+
 class Orchestrator:
     def __init__(
         self,
@@ -61,9 +68,7 @@ class Orchestrator:
         self.stress = StressRepo(session, self.clock)
 
     def plan(self, cfg: RunConfig) -> Pipeline:
-        return build_pipeline(
-            self.specs, enabled=cfg.enabled_modules, initial_capabilities=SEED_CAPABILITIES
-        )
+        return plan_pipeline(self.specs, cfg)
 
     def run_analysis(
         self,
