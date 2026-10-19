@@ -42,6 +42,13 @@ print correctly.
 
 CI (`.github/workflows/ci.yml`) runs all of these on Windows, plus a job with PySide6 absent.
 
+## Part catalog
+
+Ratings and pinouts you collect from datasheets go in a local, per-MPN catalog (JSON or CSV,
+imported in datasets that can be re-imported or deleted). Format and the rating vocabulary:
+`docs/catalog_format.md`; example: `data/catalog/example_catalog.json`;
+CLI: `python -m dfr catalog import|export|list|delete|missing`.
+
 ## Layout
 
 ```

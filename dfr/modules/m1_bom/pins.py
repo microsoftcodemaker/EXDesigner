@@ -41,12 +41,17 @@ def resolve_pin_functions(
     catalog: CatalogRepo | None = None,
     *,
     inferred: dict[str, dict[str, str]] | None = None,
+    session: Any | None = None,
+    clock: Any | None = None,
 ) -> PinResolution:
     """Fill ``Pin.function``/``function_provenance``; collect requests for unknown pinouts.
 
     ``inferred`` (refdes -> pin_id -> function) is prefill from M12's structural inference;
-    it is attached to the request only, never applied (marked ``inferred``).
+    it is attached to the request only, never applied (marked ``inferred``). Callers outside
+    the module pass ``session``/``clock`` and the catalog repo is built here.
     """
+    if catalog is None and session is not None and clock is not None:
+        catalog = CatalogRepo(session, clock)
     by_refdes = {p.refdes: p for p in parts}
     pins_by_part: dict[str, list[Pin]] = {}
     for pin in graph.pins:

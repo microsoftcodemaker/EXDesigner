@@ -37,7 +37,23 @@ class PartCatalogRow(Base):
     ratings_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     pinmap_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     source: Mapped[str] = mapped_column(String(30), nullable=False, default="user")
+    dataset: Mapped[str] = mapped_column(String(100), nullable=False, default="user", index=True)
     updated_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
+
+
+class CatalogImportRow(Base):
+    """One imported file; rows carry its dataset name so the set can be replaced or deleted."""
+
+    __tablename__ = "m1_catalog_import"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    dataset: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    filename: Mapped[str] = mapped_column(String(300), nullable=False)
+    fmt: Mapped[str] = mapped_column(String(10), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    entries: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    imported_at: Mapped[datetime] = mapped_column(UtcDateTime, nullable=False)
 
 
 class CatalogRepo:
@@ -56,6 +72,7 @@ class CatalogRepo:
         ratings: dict[str, Rating] | None = None,
         pinmap: dict[str, str] | None = None,
         source: str = "user",
+        dataset: str = "user",
     ) -> PartCatalogRow:
         row = self.find(mpn=mpn, libref=libref, footprint=footprint)
         if row is None:
@@ -63,6 +80,7 @@ class CatalogRepo:
                 mpn=mpn, libref=libref, footprint=footprint, part_class=part_class.value
             )
             self.s.add(row)
+        row.dataset = dataset
         row.part_class = part_class.value
         row.subtype = subtype
         if ratings is not None:
@@ -89,6 +107,38 @@ class CatalogRepo:
                 stmt = stmt.where(PartCatalogRow.footprint == footprint)
             return self.s.scalar(stmt)
         return None
+
+    def all_rows(self, dataset: str | None = None) -> list[PartCatalogRow]:
+        stmt = select(PartCatalogRow).order_by(PartCatalogRow.mpn, PartCatalogRow.libref)
+        if dataset is not None:
+            stmt = stmt.where(PartCatalogRow.dataset == dataset)
+        return list(self.s.scalars(stmt))
+
+    def delete_dataset(self, dataset: str) -> int:
+        rows = self.all_rows(dataset)
+        for r in rows:
+            self.s.delete(r)
+        imp = self.s.scalar(select(CatalogImportRow).where(CatalogImportRow.dataset == dataset))
+        if imp is not None:
+            self.s.delete(imp)
+        self.s.flush()
+        return len(rows)
+
+    def datasets(self) -> list[CatalogImportRow]:
+        return list(self.s.scalars(select(CatalogImportRow).order_by(CatalogImportRow.dataset)))
+
+    def record_import(
+        self, *, dataset: str, filename: str, fmt: str, sha256: str, entries: int, description: str
+    ) -> CatalogImportRow:
+        row = self.s.scalar(select(CatalogImportRow).where(CatalogImportRow.dataset == dataset))
+        if row is None:
+            row = CatalogImportRow(dataset=dataset, filename=filename, fmt=fmt, sha256=sha256)
+            self.s.add(row)
+        row.filename, row.fmt, row.sha256 = filename, fmt, sha256
+        row.entries, row.description = entries, description
+        row.imported_at = self.clock.now()
+        self.s.flush()
+        return row
 
     def ratings_for(self, row: PartCatalogRow) -> dict[str, Rating]:
         data: dict[str, Any] = json.loads(row.ratings_json)

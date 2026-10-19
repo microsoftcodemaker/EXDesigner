@@ -1,6 +1,7 @@
 """Command-line entry point: ``python -m dfr [status|demo|analyze|gui ...]``.
 
 ``gui``     opens the desktop application (needs the ``gui`` extra: PySide6).
+``catalog`` import|export|list|delete|missing: the local part catalog (docs/catalog_format.md).
 ``status``  lists discovered modules and the pipeline the orchestrator would build.
 ``demo``    runs one Tier 1 analysis on a tiny in-memory design (no topology).
 ``analyze`` imports a BOM + netlist, matches the selected topology, auto-confirms the
@@ -214,6 +215,48 @@ def _print_derating(rows: list[DeratingResult], parts: dict[int | None, Part]) -
         )
 
 
+def cmd_catalog(a: argparse.Namespace) -> int:
+    clock = SystemClock()
+    registry = discover()
+    engine = create_sqlite_engine(sqlite_url(a.db) if a.db else "sqlite+pysqlite:///:memory:")
+    migrate.upgrade_all(engine, registry.modules)
+    factory = make_session_factory(engine)
+    svc = registry.service
+    with unit_of_work(factory) as s:
+        if a.action == "import":
+            path = Path(a.file)
+            parsed = svc("catalog.parse")(path.read_bytes(), path.name, dataset=a.dataset)
+            summary = svc("catalog.import")(s, clock, parsed, filename=path.name)
+            for d in summary.diagnostics:
+                print(f"  {d}")
+            if not parsed.ok:
+                print("import aborted: fix the errors above (nothing was written)")
+                return 1
+            verb = "replaced" if summary.replaced else "created"
+            print(
+                f"dataset {summary.dataset!r} {verb}: {summary.entries} parts, "
+                f"{summary.ratings} ratings, {summary.pins} pins"
+            )
+        elif a.action == "export":
+            print(svc("catalog.export")(s, clock, dataset=a.dataset))
+        elif a.action == "list":
+            for d in svc("catalog.datasets")(s, clock):
+                when = d["imported_at"].strftime("%Y-%m-%d %H:%M") if d["imported_at"] else "-"
+                print(
+                    f"{d['dataset']:<24}{d['entries']:>6} parts  {d['format']:<5} {when}  {d['filename']}"
+                )
+            rows = svc("catalog.rows")(s, clock)
+            print(f"{len(rows)} catalog entries total")
+        elif a.action == "delete":
+            n = svc("catalog.delete_dataset")(s, clock, a.dataset)
+            print(f"deleted {n} entries of dataset {a.dataset!r}")
+        elif a.action == "missing":
+            from dfr.app.catalog_report import format_missing, missing_data  # noqa: PLC0415
+
+            print(format_missing(missing_data(s, registry, int(a.version))))
+    return 0
+
+
 def cmd_gui(db: str | None) -> int:
     try:
         from dfr.ui.shell.app import run_gui  # noqa: PLC0415 - optional dependency
@@ -259,6 +302,14 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("demo")
     gui = sub.add_parser("gui")
     gui.add_argument("--db", default=None)
+    cat = sub.add_parser("catalog")
+    cat.add_argument("action", choices=["import", "export", "list", "delete", "missing"])
+    cat.add_argument("file", nargs="?", help="catalog JSON/CSV for import")
+    cat.add_argument("--dataset", default=None)
+    cat.add_argument("--version", default=None, help="design version id for 'missing'")
+    cat.add_argument(
+        "--db", default=None, help="SQLite file (catalog lives in the design database)"
+    )
     an = sub.add_parser("analyze")
     an.add_argument("--bom", required=True)
     an.add_argument("--netlist", required=True)
@@ -279,6 +330,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_analyze(args)
     if args.command == "gui":
         return cmd_gui(args.db)
+    if args.command == "catalog":
+        return cmd_catalog(args)
     return cmd_status()
 
 

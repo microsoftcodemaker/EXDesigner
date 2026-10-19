@@ -50,7 +50,7 @@ def import_design(
     net = svc("import_netlist")(fs.read_bytes(netlist_path), netlist_path.name)
     joined = svc("join_netlist")(net.graph, bom)
     pruned = svc("prune_dnp")(net.graph, joined.parts)
-    pins = svc("resolve_pin_functions")(pruned, joined.parts)
+    pins = svc("resolve_pin_functions")(pruned, joined.parts, session=session, clock=clock)
 
     design = DesignRepo(session, clock).create(name, topology_template=topology)
     stored = svc("persist_design")(

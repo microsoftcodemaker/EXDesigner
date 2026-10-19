@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exdesigner/schemas/catalog.schema.json",
+  "title": "DfR part catalog (JSON import format)",
+  "description": "See docs/catalog_format.md. Keys of `parts` are MPNs (or libref@footprint when no MPN).",
+  "type": "object",
+  "required": ["dataset", "parts"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": { "type": "integer", "minimum": 1, "default": 1 },
+    "dataset": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]{0,98}$",
+                 "description": "Name of this set; re-importing the same name replaces it, and it can be deleted as a unit." },
+    "description": { "type": "string" },
+    "verify": { "type": "boolean", "description": "Mark every value in this file as unverified (shown low-confidence in the UI)." },
+    "parts": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["class"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string", "enum": ["resistor", "capacitor", "inductor", "diode", "transistor", "ic", "connector", "fuse", "switch", "crystal", "transformer", "test_point", "other"] },
+          "subtype": { "type": ["string", "null"] },
+          "libref": { "type": ["string", "null"] },
+          "footprint": { "type": ["string", "null"] },
+          "note": { "type": "string" },
+          "ratings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["value", "unit", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "value": { "type": "number" },
+                "unit": { "type": "string", "description": "pint-parsable unit: V, A, ohm, W, F, H, degC, K/W, nC, s, '' (dimensionless)" },
+                "source": { "type": "string", "minLength": 3, "description": "Where the number came from, e.g. 'TDK SPM6530T datasheet p.3, Isat 30 % drop'." },
+                "verify": { "type": "boolean" }
+              }
+            }
+          },
+          "pinmap": {
+            "type": "object",
+            "description": "pin id -> function (gate/drain/source, anode/cathode, sw/boot/vin/vout_sense/fb/gnd/en/other)",
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

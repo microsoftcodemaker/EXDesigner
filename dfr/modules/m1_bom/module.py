@@ -9,6 +9,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from dfr.api import API_VERSION, ModuleSpec
+from dfr.modules.m1_bom.catalog_io import (
+    catalog_rows,
+    delete_dataset,
+    export_catalog,
+    import_catalog,
+    list_datasets,
+    parse_catalog,
+)
 from dfr.modules.m1_bom.join import join_netlist, prune_dnp
 from dfr.modules.m1_bom.netlist.service import import_netlist
 from dfr.modules.m1_bom.persist import persist_design
@@ -37,6 +45,12 @@ MODULE = ModuleSpec(
         "apply_user_pinout": apply_user_pinout,
         "save_pinout": save_pinout,
         "persist_design": persist_design,
+        "catalog.parse": parse_catalog,
+        "catalog.import": import_catalog,
+        "catalog.export": export_catalog,
+        "catalog.delete_dataset": delete_dataset,
+        "catalog.datasets": list_datasets,
+        "catalog.rows": catalog_rows,
     },
     migrations_path=Path(__file__).parent / "migrations",
     table_prefix="m1_",

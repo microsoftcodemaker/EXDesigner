@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "dataset": "example",
+  "description": "Format example only. Values are placeholders marked verify; replace with datasheet numbers. See docs/catalog_format.md.",
+  "verify": true,
+  "parts": {
+    "SPM6530T-100M-HZ": {
+      "class": "inductor",
+      "subtype": "power",
+      "note": "Design C L1. i_rated 4.2 A and DCR 86.35 mohm are also in the BOM description.",
+      "ratings": {
+        "i_rated": { "value": 4.2, "unit": "A", "source": "BomDoc description 'FIXED IND 10UH 4.2A 86.35MOHM SM'" },
+        "dcr": { "value": 86.35, "unit": "mohm", "source": "BomDoc description" },
+        "i_sat": { "value": 0.0, "unit": "A", "source": "PLACEHOLDER - read Isat from the TDK SPM6530T datasheet and replace" }
+      }
+    },
+    "LM63635CC3QDRRRQ1": {
+      "class": "ic",
+      "subtype": "switching_regulator",
+      "note": "Design C U3. Pin functions below are the structural inference from the netlist; confirm against the datasheet pinout.",
+      "ratings": {
+        "i_out": { "value": 3.25, "unit": "A", "source": "BomDoc description 'Buck Switching Regulator ... 3.25A'" }
+      },
+      "pinmap": { "1": "vin", "2": "vin", "3": "gnd", "4": "other", "5": "gnd", "6": "boot", "7": "sw", "8": "vout_sense", "9": "en", "10": "other", "11": "gnd", "13": "gnd" }
+    },
+    "NMOS_GENERIC@SOT-23": {
+      "class": "transistor",
+      "subtype": "mosfet_n",
+      "note": "Example of a symbol-keyed entry (no MPN): LIBREF@FOOTPRINT.",
+      "pinmap": { "1": "gate", "2": "source", "3": "drain" }
+    }
+  }
+}

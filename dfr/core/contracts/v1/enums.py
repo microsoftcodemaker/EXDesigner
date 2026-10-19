@@ -58,6 +58,7 @@ class RatingProvenance(StrEnum):
     API = "api"
     DATASHEET = "datasheet_pdf_manual"
     BOM_DESCRIPTION = "bom_description"
+    CATALOG = "catalog"  # imported from a user catalog file (JSON/CSV), source text kept
 
 
 class NetKind(StrEnum):

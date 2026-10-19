@@ -59,6 +59,12 @@ Imports go downward only. A module never imports another module; they exchange
 - Keep files under ~400 lines; split rather than grow.
 - Do not create or delete anything outside this repository folder.
 
+## Part catalog
+
+User-supplied ratings/pinouts live in M1's `m1_part_catalog` (per-MPN, grouped in datasets).
+Format, rating names and merge/delete semantics: `docs/catalog_format.md`. New rating names a
+rule or model reads must be added to that table.
+
 ## Fixtures
 
 `tests/fixtures/design_c/` holds the only real CAD exports (Altium Protel netlist + BomDoc).
