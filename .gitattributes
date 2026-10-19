@@ -1,0 +1,7 @@
+# Fixtures must keep their original bytes (CRLF, Latin-1); never normalise them.
+tests/fixtures/** -text
+*.py text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

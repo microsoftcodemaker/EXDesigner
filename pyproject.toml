@@ -1,0 +1,139 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dfr-toolkit"
+version = "0.1.0"
+description = "Design for Reliability Toolkit: derating, thermal, lifetime and failure-rate analysis for power electronics from a BOM and netlist."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "EXDesigner contributors" }]
+dependencies = [
+    "pydantic>=2.7",
+    "SQLAlchemy>=2.0",
+    "alembic>=1.13",
+    "pint>=0.24",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "PyYAML>=6.0",
+    "jsonschema>=4.21",
+    "networkx>=3.2",
+]
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.10.1",
+    "matplotlib>=3.8",
+    "Jinja2>=3.1",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "import-linter>=2.0",
+    "pre-commit>=3.7",
+    "types-PyYAML",
+    "types-jsonschema",
+    "pandas-stubs",
+]
+
+[project.entry-points."dfr.modules"]
+# Third-party modules register here: "<module_id> = package.module:MODULE"
+
+[project.entry-points."dfr.plugins"]
+# Third-party topology / model plugins register here.
+
+[tool.setuptools.packages.find]
+include = ["dfr*"]
+
+[tool.setuptools.package-data]
+"dfr" = ["py.typed"]
+"dfr.core.db.migrations" = ["*.ini", "*.mako", "versions/*.py"]
+"dfr.modules._example.migrations" = ["*.py"]
+
+# --------------------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["dfr", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ANN", "PL"]
+ignore = [
+    "ANN401",  # Any in **kwargs
+    "PLR0913", # too many arguments: contracts legitimately take many
+    "PLR2004", # magic numbers: checked case by case in equations
+    "RUF012",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "PLR", "S101"]
+"scripts/**" = ["ANN"]
+"dfr/core/db/migrations/versions/*" = ["ANN", "E501"]
+"dfr/modules/*/migrations/*" = ["ANN", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dfr"]
+
+# --------------------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+packages = ["dfr"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["dfr.core.*", "dfr.app.*", "dfr.modules.*", "dfr.topologies.*", "dfr.api.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["pint.*", "alembic.*"]
+ignore_missing_imports = true
+
+# --------------------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "gui: tests that need PySide6 (skipped in the no-Qt CI job)",
+]
+
+[tool.coverage.run]
+source = ["dfr/core", "dfr/app", "dfr/modules", "dfr/topologies"]
+omit = ["*/migrations/*"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+# --------------------------------------------------------------------------- import-linter
+[tool.importlinter]
+root_package = "dfr"
+
+[[tool.importlinter.contracts]]
+name = "Layers: ui -> app -> modules/topologies -> core"
+type = "layers"
+layers = [
+    "dfr.ui",
+    "dfr.app",
+    "dfr.modules | dfr.topologies",
+    "dfr.api",
+    "dfr.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Modules are independent of each other"
+type = "independence"
+modules = ["dfr.modules.*"]
+
+[[tool.importlinter.contracts]]
+name = "Topologies are independent of each other"
+type = "independence"
+modules = ["dfr.topologies.*"]
