@@ -11,6 +11,7 @@ same part is asked once.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from dfr.core.contracts import (
     NetlistGraph,
@@ -136,6 +137,19 @@ def apply_user_pinout(
         pins=pins,
         requests=[r for r in resolution.requests if r.refdes != refdes],
         unresolved_refdes=resolution.unresolved_refdes - {refdes},
+    )
+
+
+def save_pinout(session: Any, clock: Any, part: Part, pinout: dict[str, str]) -> None:
+    """Persist a confirmed pinout to the pin-map library so the same part is asked once."""
+    CatalogRepo(session, clock).upsert(
+        mpn=part.mpn,
+        libref=part.libref,
+        footprint=part.package,
+        part_class=part.part_class,
+        subtype=part.subtype,
+        pinmap=pinout,
+        source="user",
     )
 
 

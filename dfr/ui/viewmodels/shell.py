@@ -22,6 +22,7 @@ from dfr.core.db.session import make_session_factory
 from dfr.core.ports import Clock, SystemClock
 from dfr.core.registry import DiscoveryResult, discover
 from dfr.ui.viewmodels.observable import Property, Signal
+from dfr.ui.viewmodels.workspace import Workspace
 
 STEPS: tuple[tuple[str, str], ...] = (
     ("design", "Design"),
@@ -93,6 +94,7 @@ class ShellViewModel:
         self.messages_changed: Signal[list[Diagnostic]] = Signal()
         self.status_text: Property[str] = Property("Ready")
         self.tier_mix: Property[TierMix] = Property(TierMix())
+        self.workspace = Workspace(self)
 
         for d in self.registry.diagnostics:
             self.messages.append(d)
@@ -134,6 +136,7 @@ class ShellViewModel:
         self.set_step("design", StepStatus.DONE)
         self.set_step("parts", StepStatus.READY if version else StepStatus.NOT_STARTED)
         self.refresh_runs()
+        self.workspace.reload_from_db()
         self.status_text.set(f"{design.name}  v{version.version_no if version else '-'}")
         self.select(
             Selection(
