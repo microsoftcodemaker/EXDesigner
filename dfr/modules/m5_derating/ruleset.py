@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,7 @@ import yaml
 from dfr.core.contracts import Diagnostic, Severity
 
 MODULE_ID = "m5_derating"
-REPO_DATA = Path(__file__).resolve().parents[3] / "data"
+REPO_DATA = Path(os.environ.get("DFR_DATA_DIR", Path(__file__).resolve().parents[3] / "data"))
 RULESETS_DIR = REPO_DATA / "rulesets"
 SCHEMA_PATH = REPO_DATA / "schemas" / "ruleset.schema.json"
 

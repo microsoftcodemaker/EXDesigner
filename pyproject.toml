@@ -75,7 +75,8 @@ ignore = [
 "tests/**" = ["ANN", "PLR", "S101", "E501", "PLC0415"]
 "dfr/__main__.py" = ["E501"]
 "dfr/ui/shell/theme.py" = ["E501"]
-"scripts/**" = ["ANN"]
+"scripts/**" = ["ANN", "E501", "PLW1510"]
+"packaging/**" = ["PLC0415"]
 "dfr/core/db/migrations/versions/*" = ["ANN", "E501"]
 "dfr/modules/*/migrations/*" = ["ANN", "E501"]
 

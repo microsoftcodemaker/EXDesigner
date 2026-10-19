@@ -9,7 +9,9 @@ built milestone by milestone from it.
 topology recognition with confirmation, Tier 1 equations, derating, thermal, immutable runs,
 HTML/PDF report, and an Altium-style PySide6 desktop app (dark theme, dockable Project /
 Properties / Messages panels, document tabs). Formats: Altium `.BomDoc` + Protel netlist.
-Not yet: installer (T25), v1 modules (lifetime, failure rate, triage, CSV Tier 2, FMEA).
+Packaging: `python scripts/build_installer.py` (PyInstaller one-folder, ~535 MB unpacked; Inno Setup
+script in `packaging/`, needs ISCC installed). Not yet: v1 modules (lifetime, failure rate, triage,
+CSV Tier 2, FMEA).
 
 ## Quick start (development)
 

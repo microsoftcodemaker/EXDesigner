@@ -29,3 +29,7 @@ Thumbs.db
 .vscode/
 .idea/
 .subtractive/
+
+# PyInstaller output
+build/
+dist/

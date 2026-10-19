@@ -8,6 +8,8 @@ These apply to humans and coding agents alike. They encode PRD section 2.7 (modu
 - Full check before any commit (all must pass):
   `ruff check . && ruff format --check . && mypy && lint-imports && pytest --cov && python scripts/subtractive_test.py && python scripts/check_ui_tokens.py`
 - Windows consoles: set `PYTHONUTF8=1`.
+- Build the app: `pip install pyinstaller && python scripts/build_installer.py [--skip-inno]`
+  (writes git-ignored `build/` and `dist/`, ~1 GB; delete them when done).
 - New migration: `python scripts/new_migration.py core "msg" --autogenerate` or
   `python scripts/new_migration.py <module_id> "msg"` (module tables are written by hand).
 
