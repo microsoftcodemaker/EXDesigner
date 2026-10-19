@@ -71,7 +71,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN", "PLR", "S101"]
+"tests/**" = ["ANN", "PLR", "S101", "E501", "PLC0415"]
+"dfr/__main__.py" = ["E501"]
 "scripts/**" = ["ANN"]
 "dfr/core/db/migrations/versions/*" = ["ANN", "E501"]
 "dfr/modules/*/migrations/*" = ["ANN", "E501"]

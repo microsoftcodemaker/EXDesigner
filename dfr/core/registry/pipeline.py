@@ -83,7 +83,9 @@ def build_pipeline(
     sorter: TopologicalSorter[str] = TopologicalSorter()
     for mid, spec in active.items():
         deps = {
-            providers[c].id for c in spec.requires if c in providers and providers[c].id in active
+            providers[c].id
+            for c in (*spec.requires, *spec.optional_requires)
+            if c in providers and providers[c].id in active and providers[c].id != mid
         }
         sorter.add(mid, *deps)
     try:

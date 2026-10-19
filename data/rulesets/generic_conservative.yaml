@@ -1,0 +1,35 @@
+# Default derating rule set (PRD 3.5 "Example defaults", decision 1).
+# EVERY factor here is illustrative and marked verify: check against the chosen standard
+# (e.g. ECSS-Q-ST-30-11 / NAVSEA SD-18 style tables) before trusting a result.
+# limit = factor * rating (+ offset); PASS stress <= limit, WARN limit < stress <= rating, FAIL stress > rating.
+id: generic_conservative
+version: 1
+description: Conservative generic derating for commercial power electronics (all values verify)
+source: PRD section 3.5 example table
+rules:
+  # ---- capacitors
+  - { id: cap_ceramic_voltage,  part_class: capacitor, subtype: ceramic,  param: v_dc, rating: v_rated, factor: 0.5, source: "PRD 3.5: MLCC <= 0.5 x rated (X5R/X7R, conservative) (verify)" }
+  - { id: cap_elec_voltage,     part_class: capacitor, subtype: aluminum_electrolytic, param: v_dc, rating: v_rated, factor: 0.8, source: "PRD 3.5: aluminium electrolytic <= 0.8 x V rated (verify)" }
+  - { id: cap_elec_ripple,      part_class: capacitor, subtype: aluminum_electrolytic, param: i_rms, rating: i_ripple, factor: 1.0, source: "PRD 3.5: <= 1.0 x rated ripple at actual temperature (verify)" }
+  - { id: cap_polymer_voltage,  part_class: capacitor, subtype: polymer,  param: v_dc, rating: v_rated, factor: 0.8, source: "PRD 3.5 by analogy with electrolytic (verify)" }
+  - { id: cap_film_voltage,     part_class: capacitor, subtype: film,     param: v_dc, rating: v_rated, factor: 0.8, source: "PRD 3.5: film <= 0.8 x rated (verify)" }
+  - { id: cap_generic_voltage,  part_class: capacitor, subtype: null,     param: v_dc, rating: v_rated, factor: 0.6, source: "fallback for unknown dielectric (verify)" }
+  # ---- resistors (power vs temperature curve)
+  - { id: res_power, part_class: resistor, param: p_loss, rating: p_rated, factor: 0.5, curve: { t_knee: t_knee, t_max: t_max }, source: "PRD 3.5: <= 0.5 x rated at 70 degC, linear to 0 at max temperature (verify)" }
+  - { id: res_voltage, part_class: resistor, param: v_dc, rating: v_rated, factor: 0.8, source: "generic (verify)" }
+  # ---- MOSFETs
+  - { id: fet_vds,  part_class: transistor, param: v_peak, rating: v_ds, factor: 0.8, source: "PRD 3.5: <= 0.8 x BVdss (verify)" }
+  - { id: fet_id,   part_class: transistor, param: i_rms,  rating: i_d,  factor: 0.7, source: "PRD 3.5: <= 0.7 x Id(Tc) (verify)" }
+  - { id: fet_tj,   part_class: transistor, param: tj,     rating: tj_max, factor: 1.0, offset: -25, source: "PRD 3.5: Tj <= Tjmax - 25 degC (verify)" }
+  # ---- diodes
+  - { id: diode_vr, part_class: diode, param: v_peak, rating: v_rated, factor: 0.8, source: "PRD 3.5: <= 0.8 x VRRM (verify)" }
+  - { id: diode_if, part_class: diode, param: i_avg,  rating: i_rated, factor: 0.7, source: "PRD 3.5: <= 0.7 x IF(AV) (verify)" }
+  - { id: diode_tj, part_class: diode, param: tj,     rating: tj_max, factor: 1.0, offset: -25, source: "PRD 3.5: Tj <= Tjmax - 25 degC (verify)" }
+  # ---- inductors
+  - { id: ind_isat,  part_class: inductor, param: i_peak, rating: i_sat,   factor: 0.8, source: "PRD 3.5: Ipk <= 0.8 x Isat (verify)" }
+  - { id: ind_irms,  part_class: inductor, param: i_rms,  rating: i_rated, factor: 0.8, source: "PRD 3.5: Irms <= 0.8 x Irated (verify)" }
+  # ---- ICs (integrated-switch regulators)
+  - { id: ic_vin,   part_class: ic, param: v_peak, rating: v_in_max, factor: 0.9, source: "PRD 3.5: supply <= 0.9 x abs-max (verify)" }
+  - { id: ic_iout,  part_class: ic, param: i_out,  rating: i_out,    factor: 0.8, source: "PRD 3.2 IC checks: Iout_max vs rated output current; factor verify" }
+  - { id: ic_ilim,  part_class: ic, param: i_peak, rating: i_limit,  factor: 0.9, source: "PRD 3.2 IC checks: IL_pk vs current limit; factor verify" }
+  - { id: ic_tj,    part_class: ic, param: tj,     rating: tj_max,   factor: 1.0, offset: -25, source: "PRD 3.5: Tj <= Tjmax - 25 degC (verify)" }

@@ -60,3 +60,7 @@ class DiagnosticSink:
 
     def __len__(self) -> int:
         return len(self._items)
+
+    def __bool__(self) -> bool:
+        """An empty sink is still a sink; never let ``sink or default`` discard it."""
+        return True

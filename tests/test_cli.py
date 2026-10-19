@@ -15,4 +15,4 @@ def test_demo_runs_end_to_end(capsys: pytest.CaptureFixture[str]) -> None:
     assert main(["demo"]) == 0
     out = capsys.readouterr().out
     assert "run #1 completed" in out
-    assert "parts=4 effective_stress=1" in out
+    assert "ind_isat" in out and "WARN" in out  # 3.84 A peak on a 4.2 A Isat part at 0.8 derating

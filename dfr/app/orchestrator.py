@@ -3,6 +3,11 @@
 It knows no module by name. Steps come from ``build_pipeline`` and exchange data only
 through the capability bag (``RunContext``). Each run is persisted before any step runs
 and frozen (``finish``) afterwards, with every diagnostic stored against it.
+
+Persistence stays with the module that owns the table: after a step, its optional
+``persist(session, run_id, result)`` hook stores rows and may return replacement outputs
+(e.g. stress values now carrying ids). When a step provides ``stress``, the effective
+stress map is re-resolved so downstream steps see the new Tier 1 values.
 """
 
 from __future__ import annotations
@@ -13,7 +18,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from dfr.core.contracts.v1 import (
+from dfr.core.contracts import (
     AnalysisRun,
     Diagnostic,
     RunConfig,
@@ -26,10 +31,10 @@ from dfr.core.db.repos import DiagnosticRepo, PartRepo, RunRepo, StressRepo
 from dfr.core.db.repos.stress import resolve_effective_stress
 from dfr.core.diagnostics import DiagnosticSink
 from dfr.core.ports import Clock, SystemClock
-from dfr.core.registry import ModuleSpec, Pipeline, RunContext, build_pipeline
+from dfr.core.registry import ModuleSpec, Pipeline, RunContext, StepResult, build_pipeline
 
 # Capabilities the orchestrator itself seeds before any module step runs.
-SEED_CAPABILITIES = ("parts", "effective_stress", "run", "config")
+SEED_CAPABILITIES = ("parts", "effective_stress", "run", "config", "clock")
 
 
 @dataclass
@@ -44,10 +49,17 @@ class RunOutcome:
         return self.run.status is RunStatus.COMPLETED
 
 
-def plan_pipeline(specs: Sequence[ModuleSpec], cfg: RunConfig) -> Pipeline:
-    """The step order the orchestrator would use for ``cfg``; no database needed."""
+def plan_pipeline(
+    specs: Sequence[ModuleSpec], cfg: RunConfig, extra_capabilities: Iterable[str] = ()
+) -> Pipeline:
+    """The step order the orchestrator would use for ``cfg``; no database needed.
+
+    Service-only modules (no ``step``) are not pipeline steps and are left out.
+    """
     return build_pipeline(
-        specs, enabled=cfg.enabled_modules, initial_capabilities=SEED_CAPABILITIES
+        [s for s in specs if s.step is not None],
+        enabled=cfg.enabled_modules,
+        initial_capabilities=(*SEED_CAPABILITIES, *extra_capabilities),
     )
 
 
@@ -67,8 +79,8 @@ class Orchestrator:
         self.parts = PartRepo(session)
         self.stress = StressRepo(session, self.clock)
 
-    def plan(self, cfg: RunConfig) -> Pipeline:
-        return plan_pipeline(self.specs, cfg)
+    def plan(self, cfg: RunConfig, extra_capabilities: Iterable[str] = ()) -> Pipeline:
+        return plan_pipeline(self.specs, cfg, extra_capabilities)
 
     def run_analysis(
         self,
@@ -80,7 +92,8 @@ class Orchestrator:
         tier_level: Tier = Tier.T1,
         extra_context: Mapping[str, Any] | None = None,
     ) -> RunOutcome:
-        pipeline = self.plan(cfg)
+        extra = dict(extra_context or {})
+        pipeline = self.plan(cfg, extra)
         sink = DiagnosticSink("orchestrator")
         sink.extend(pipeline.diagnostics)
 
@@ -92,25 +105,26 @@ class Orchestrator:
             model_set={s.id: s.version for s in pipeline.steps},
         )
         assert run.id is not None
+        run_id = run.id
 
         parts = self.parts.for_version(design_version_id, include_dnp=False)
-        stored = self.stress.for_version(design_version_id)
-        effective = resolve_effective_stress([*stored, *(overrides or [])])
-        persisted_effective = {k: v for k, v in effective.items() if v.id is not None}
-        if len(persisted_effective) != len(effective):
+        override_list = list(overrides or [])
+        if any(v.id is None for v in override_list):
             sink.warning(
                 "RUN_UNPERSISTED_OVERRIDES",
-                "some override stress values are not stored and were used but not snapshotted",
+                "some override stress values are not stored; they are used but not snapshotted",
             )
-        self.runs.snapshot_effective(run.id, persisted_effective)
-
+        effective = resolve_effective_stress(
+            [*self.stress.for_version(design_version_id), *override_list]
+        )
         ctx = RunContext(
             {
                 "parts": parts,
                 "effective_stress": effective,
                 "run": run,
                 "config": cfg,
-                **(extra_context or {}),
+                "clock": self.clock,
+                **extra,
             }
         )
 
@@ -121,7 +135,7 @@ class Orchestrator:
                 continue
             try:
                 result = spec.step(ctx)
-            except Exception as exc:
+            except Exception as exc:  # a module must never take down the run
                 sink.error("STEP_CRASHED", f"module '{spec.id}' raised {exc!r}")
                 if not spec.optional:
                     status = RunStatus.FAILED
@@ -133,12 +147,33 @@ class Orchestrator:
                     "STEP_INCOMPLETE",
                     f"module '{spec.id}' did not provide: {', '.join(missing)}",
                 )
-            ctx = ctx.with_outputs(result.outputs)
+            outputs = dict(result.outputs)
+            if spec.persist is not None:
+                try:
+                    replaced = spec.persist(self.session, run_id, result)
+                except Exception as exc:
+                    sink.error("STEP_PERSIST_FAILED", f"module '{spec.id}' persist raised {exc!r}")
+                    replaced = None
+                if replaced:
+                    outputs.update(replaced)
+            ctx = ctx.with_outputs(outputs)
+            if "stress" in outputs:
+                ctx = ctx.with_outputs(
+                    {
+                        "effective_stress": resolve_effective_stress(
+                            [*self.stress.for_version(design_version_id), *override_list]
+                        )
+                    }
+                )
 
         if sink.has_errors and status is RunStatus.COMPLETED and not pipeline.steps:
             status = RunStatus.FAILED
-        self.diags.add_many(run.id, sink.items)
-        finished = self.runs.finish(run.id, status)
+        final_effective: dict[Any, StressValue] = ctx.get("effective_stress")
+        self.runs.snapshot_effective(
+            run_id, {k: v for k, v in final_effective.items() if v.id is not None}
+        )
+        self.diags.add_many(run_id, sink.items)
+        finished = self.runs.finish(run_id, status)
         return RunOutcome(run=finished, pipeline=pipeline, context=ctx, diagnostics=list(sink))
 
 
@@ -147,3 +182,13 @@ def summarize(diagnostics: Iterable[Diagnostic]) -> dict[str, int]:
     for d in diagnostics:
         counts[d.severity.value] += 1
     return counts
+
+
+__all__ = [
+    "SEED_CAPABILITIES",
+    "Orchestrator",
+    "RunOutcome",
+    "StepResult",
+    "plan_pipeline",
+    "summarize",
+]

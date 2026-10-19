@@ -55,6 +55,8 @@ class StepResult(BaseModel):
 
 
 StepFn = Callable[[RunContext], StepResult]
+# persist(session, run_id, result) -> replacement outputs (e.g. stored rows with ids) or None
+PersistFn = Callable[[Any, int, StepResult], Mapping[str, Any] | None]
 
 
 class ModuleSpec(BaseModel):
@@ -67,9 +69,11 @@ class ModuleSpec(BaseModel):
     version: str
     api_version: str
     requires: tuple[str, ...] = ()
+    optional_requires: tuple[str, ...] = ()  # ordering only; absence is not a diagnostic
     provides: tuple[str, ...] = ()
     optional: bool = True
     step: StepFn | None = None
+    persist: PersistFn | None = None
     services: dict[str, Callable[..., Any]] = Field(default_factory=dict)
     migrations_path: Path | None = None
     table_prefix: str | None = None
