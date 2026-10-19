@@ -49,6 +49,10 @@ class DiscoveryResult:
     def has_service(self, name: str) -> bool:
         return any(name in m.services for m in self.modules)
 
+    def services_named(self, name: str) -> list[Callable[..., Any]]:
+        """Every provider of a service name (e.g. each topology plugin's pattern table)."""
+        return [m.services[name] for m in self.modules if name in m.services]
+
 
 def user_plugin_dir() -> Path:
     base = os.environ.get("APPDATA") or str(Path.home())
