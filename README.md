@@ -5,8 +5,11 @@ report for power electronics: derating, junction temperature, lifetime, and fail
 every number labelled by source and fidelity tier. See the PRD for scope; this repository is
 built milestone by milestone from it.
 
-**Status:** Tier 1 engine complete headless (PRD T01–T18): BOM/netlist import, buck topology
-recognition, Tier 1 equations, derating, thermal, immutable runs. GUI shell in progress (T19).
+**Status:** MVP feature-complete except packaging (PRD T01–T24). BOM/netlist import, buck
+topology recognition with confirmation, Tier 1 equations, derating, thermal, immutable runs,
+HTML/PDF report, and an Altium-style PySide6 desktop app (dark theme, dockable Project /
+Properties / Messages panels, document tabs). Formats: Altium `.BomDoc` + Protel netlist.
+Not yet: installer (T25), v1 modules (lifetime, failure rate, triage, CSV Tier 2, FMEA).
 
 ## Quick start (development)
 
@@ -45,7 +48,8 @@ dfr/api/         public surface for module and plugin authors
 dfr/app/         orchestrator (builds the pipeline from the registry; imports no module)
 dfr/modules/     one folder per module: module.py + logic + migrations/   (_example is a stub)
 dfr/topologies/  one folder per topology: pattern + template + data
-dfr/ui/          PySide6 GUI (optional extra `gui`); tokens.py holds every color
+dfr/ui/          PySide6 GUI (optional extra `gui`): shell/, kit/, viewmodels/ (Qt-free),
+                 screens/<id>/screen.py discovered by folder; tokens.py holds every color
 data/            rule sets, model constants, pin maps, FMEA library (data, not code)
 tests/           pytest; tests/fixtures/design_c holds the supplied Altium netlist + BomDoc
 docs/            architecture notes and how-to recipes

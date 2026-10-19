@@ -25,9 +25,12 @@ Imports go downward only. A module never imports another module; they exchange
   Copy `dfr/modules/_example/` to start.
 - **Topology**: new folder `dfr/topologies/<id>/` with a `TopologyPattern`, a `TopologyTemplate`
   naming that pattern, and its data files.
-- **Screen / report section**: export `SCREENS` / `REPORT_SECTIONS` lists from `module.py`.
-  The stepper and report are built from the registry; a screen whose required module is
-  absent is hidden.
+- **Screen**: folder `dfr/ui/screens/<id>/screen.py` with `SCREEN: ScreenSpec` and `build(vm)`.
+  Hidden when `SCREEN.requires` modules are absent. Views call registry services only.
+- **Report section**: a `(ReportSectionSpec, render)` pair returned by a module's
+  `report.sections` service; `render(RunBundle) -> str` and every number goes through `num()`.
+- **Service**: add a callable to `ModuleSpec.services`; consumers use `registry.service(name)`.
+  Never import another module's package, not even from the UI.
 - **Contract change**: additive fields go in `contracts/v1`; breaking changes create
   `contracts/v2` and keep v1 for one release. Bump `API_VERSION` only for breaking changes.
 
@@ -49,6 +52,8 @@ Imports go downward only. A module never imports another module; they exchange
 - Equation code cites its source (PRD section and/or document, page) in the docstring and
   has at least three hand-calculated test cases at 0.1% tolerance.
 - UI: views hold no logic; view-models are plain Python; all colors come from `dfr/ui/tokens.py`.
+  Beware Qt name clashes on QWidget/QDialog subclasses (`render`, `result`, `update`, `close`);
+  mypy flags them, name your methods/attributes differently.
 - Keep files under ~400 lines; split rather than grow.
 - Do not create or delete anything outside this repository folder.
 

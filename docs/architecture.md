@@ -45,8 +45,28 @@ Imports go down only (import-linter contract "Layers"). Modules are mutually ind
 | `lifetime` | M7 | `list[LifetimeResult]` |
 | `failure_rate` | M8 | `FailureRateResult` |
 | `refinement` | M3 | `list[RefinementItem]` |
+| `prompts`, `inferred_values`, `template_params` | M2 | `list[ValuePrompt]`, `InferredValues`, `dict` |
+| `ruleset_hash` | M5 | `str` |
+
+Seeded by the app layer (`dfr.app.analysis.run_tier1`) before the run: `stage`, `role_map`,
+`converter_spec`, `templates`, `ruleset`, optional `inferred_overrides`, `part_params`.
+Steps may declare `optional_requires` for ordering without a hard dependency (M5 after M6).
 
 New modules add rows here when they introduce a capability.
+
+## Services (registry, not imports)
+
+Modules expose named callables in `ModuleSpec.services`; the app and UI call
+`registry.service(name)` (single provider) or `registry.services_named(name)` (fan-out, e.g.
+every topology plugin's `topology.patterns`). Current names: `import_bom`, `import_netlist`,
+`join_netlist`, `prune_dnp`, `resolve_pin_functions`, `save_pinout`, `persist_design` (M1);
+`available_patterns`, `match_topology`, `apply_edits`, `confirm_roles`, `role_map_for`,
+`check_staleness`, `prefill_from_stale` (M12); `infer_passives`, `compute_template_stress`,
+`answer_prompt`, `manual_stress` (M2); `load_ruleset`, `load_derating_results` (M5);
+`solve_thermal`, `load_thermal_results` (M6); `build_report_html`, `write_report_html`,
+`load_report_bundle` (M11); `topology.patterns`, `topology.templates`, `topology.inference`
+(each topology folder). A module's own result rows are persisted by its `persist` hook and read
+back only through its services, so M11 never imports M5/M6.
 
 ## Database
 
@@ -84,9 +104,12 @@ implement `run(ctx) -> StepResult`, write `migrations/0001_<id>.py` with
 `template.py` (`TopologyTemplate`, `pattern_id` = the pattern), `data/` and `module.py`
 registering both. Add golden role-map and hand-calculated stress tests.
 
-**Add a screen** — in the owning module's `module.py`, add a `ScreenSpec` to `SCREENS` with a
-`factory` that builds the Qt view from a plain view-model. Only `dfr.ui.shell` and
-`dfr.ui.kit` import PySide6.
+**Add a screen** — create `dfr/ui/screens/<id>/screen.py` exposing `SCREEN = ScreenSpec(id, title,
+step, order, requires=(module ids,))` and `build(vm) -> QWidget`. The Project panel and document
+tabs are built from this folder scan; a screen whose required modules are absent is hidden.
+Shared state lives in `dfr.ui.viewmodels.workspace.Workspace` (Qt-free) and engine calls go
+through registry services. Colors only from `dfr/ui/tokens.py`; selection goes to the
+Properties panel via `vm.select(Selection(...))`.
 
 ## Tiered workflow state machine (PRD 2.6)
 
