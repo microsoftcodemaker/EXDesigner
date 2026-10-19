@@ -34,6 +34,12 @@ Expected `buck_integrated` role map (golden, PRD section 3.12 and REC-10):
 Inferred IC pin functions (prefill only, must be user-confirmed): `sw`=7, `boot`=6,
 `vin`=1,2, `vout_sense`=8, `gnd`=3,5,11,13, `en/reset`=9 (net `RESET_N`), `vcc`=4,10.
 
+## Operating point (board owner, PRD 8.2 Design C)
+
+Vin 7–22 V, Vout 3.3 V (fixed), Iout_max 3.25 A, fsw 400 kHz, ambient 20 °C. Expected Tier 1
+verdicts with `generic_conservative`: C2 (35 V X7R) WARN at 22 V, C1 (50 V) PASS, U3 `i_out`
+WARN at 100 % of rating, L1 `i_sat` UNKNOWN (no rating), IC loss prompted.
+
 ## `design_c.BomDoc` — Altium LiveBOM
 
 - Latin-1, CRLF, pipe-delimited `|KEY=VALUE` records, one record per line.

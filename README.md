@@ -22,7 +22,7 @@ python -m venv .venv
 .venv\Scripts\python -m dfr gui            # desktop app (dark Altium-style shell)
 .venv\Scripts\python -m dfr analyze --bom tests/fixtures/design_c/design_c.BomDoc `
     --netlist tests/fixtures/design_c/design_c_protel.net --topology buck_integrated `
-    --vin-min 8 --vin-max 36 --vout 3.3 --iout 3.25 --fsw 400e3 --ta 40
+    --vin-min 7 --vin-max 22 --vout 3.3 --iout 3.25 --fsw 400e3 --ta 20
 ```
 
 Python 3.12+ (tested on 3.12 and 3.14). Set `PYTHONUTF8=1` on Windows consoles so unit symbols

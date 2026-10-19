@@ -19,7 +19,7 @@ from tests.conftest import FIXTURES
 pytest.importorskip("dfr.topologies.buck")
 BOM = FIXTURES / "design_c" / "design_c.BomDoc"
 NET = FIXTURES / "design_c" / "design_c_protel.net"
-SPEC = ConverterSpec(vin_min=8, vin_max=36, vout=3.3, iout_max=3.25, fsw=400e3, t_ambient=40)
+SPEC = ConverterSpec(vin_min=7, vin_max=22, vout=3.3, iout_max=3.25, fsw=400e3, t_ambient=20)
 
 
 @pytest.fixture
@@ -42,14 +42,14 @@ def two_runs(session: Session, clock: FixedClock):
     c2 = next(
         s
         for s in first.context.get("stress")
-        if s.param == "v_dc" and s.scenario == "vin_max" and s.value == 36.0
+        if s.param == "v_dc" and s.scenario == "vin_max" and s.value == 22.0
     )
     clock.advance(minutes=1)
     StressRepo(session, clock).add(
         c2.model_copy(
             update={
                 "id": None,
-                "value": 30.0,
+                "value": 16.0,
                 "tier": Tier.T2,
                 "source": Source.MEASURED,
                 "tool": "csv:scope.csv",
@@ -93,7 +93,7 @@ def test_report_html_every_number_has_tier_and_source(
         "RPT-02: 100 % of displayed numbers carry badge + source"
     )
     assert "Design C" in html and "Executive summary" in html and "Ranked risk list" in html
-    assert "FAIL" in html and "cap_ceramic_voltage" in html
+    assert "WARN" in html and "cap_ceramic_voltage" in html
     assert 'badge t2">T2' in html and ">meas<" in html  # the measured C2 value made it in
     assert f"refines run #{first.run.id}" in html and "Before" in html  # refinement section
     assert "not a safety certification" in html

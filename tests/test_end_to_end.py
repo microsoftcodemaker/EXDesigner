@@ -20,8 +20,9 @@ from tests.conftest import FIXTURES
 
 BOM = FIXTURES / "design_c" / "design_c.BomDoc"
 NET = FIXTURES / "design_c" / "design_c_protel.net"
-# Placeholder operating point until the board owner supplies the real one (LM63635 limits).
-SPEC = ConverterSpec(vin_min=8, vin_max=36, vout=3.3, iout_max=3.25, fsw=400e3, t_ambient=40)
+# Design C operating point from the board owner (PRD 8.2): 7-22 V in, 3.3 V / 3.25 A out,
+# 400 kHz, 20 degC ambient.
+SPEC = ConverterSpec(vin_min=7, vin_max=22, vout=3.3, iout_max=3.25, fsw=400e3, t_ambient=20)
 
 
 @pytest.fixture
@@ -105,10 +106,12 @@ def test_design_c_tier1_end_to_end(session: Session, clock: FixedClock, registry
         (parts_by_id := {p.id: p for p in parts.values()})[r.part_id].refdes + ":" + r.rule_id: r
         for r in out.context.get("derating")
     }
-    assert derating["C2:cap_ceramic_voltage"].status is DeratingStatus.FAIL  # 36 V on a 35 V cap
-    assert (
-        derating["C1:cap_ceramic_voltage"].status is DeratingStatus.WARN
-    )  # 36 V on 50 V, limit 25 V
+    # 22 V on a 35 V X7R: over the 0.5 x limit (17.5 V) but under the rating -> WARN
+    assert derating["C2:cap_ceramic_voltage"].status is DeratingStatus.WARN
+    assert derating["C2:cap_ceramic_voltage"].margin == pytest.approx(-0.257, abs=1e-3)
+    # 22 V on a 50 V X7R: limit 25 V -> PASS with 12 % margin
+    assert derating["C1:cap_ceramic_voltage"].status is DeratingStatus.PASS
+    assert derating["C1:cap_ceramic_voltage"].margin == pytest.approx(0.12, abs=1e-3)
     assert derating["C5:cap_ceramic_voltage"].status is DeratingStatus.PASS
     assert derating["L1:ind_isat"].status is DeratingStatus.UNKNOWN  # no Isat rating -> never PASS
     assert derating["L1:ind_irms"].status is DeratingStatus.PASS
@@ -136,12 +139,13 @@ def test_design_c_tier1_end_to_end(session: Session, clock: FixedClock, registry
         for s in stress
         if s.part_id == parts["C2"].id and s.param == "v_dc" and s.scenario == "vin_max"
     )
+    assert stored_c2.value == 22.0
     clock.advance(minutes=1)
     repo.add(
         stored_c2.model_copy(
             update={
                 "id": None,
-                "value": 30.0,
+                "value": 16.0,
                 "tier": Tier.T2,
                 "source": Source.MEASURED,
                 "tool": "scope",
@@ -164,8 +168,8 @@ def test_design_c_tier1_end_to_end(session: Session, clock: FixedClock, registry
         if r.part_id == parts["C2"].id and r.rule_id == "cap_ceramic_voltage"
     )
     assert (
-        c2_again.stress == 30.0 and c2_again.status is DeratingStatus.WARN
-    )  # measured T2 beat equation T1
+        c2_again.stress == 16.0 and c2_again.status is DeratingStatus.PASS
+    )  # measured T2 (16 V) beat the equation T1 (22 V) and clears the 17.5 V limit
 
 
 def test_cli_analyze_design_c(capsys: pytest.CaptureFixture[str]) -> None:
@@ -179,9 +183,9 @@ def test_cli_analyze_design_c(capsys: pytest.CaptureFixture[str]) -> None:
             "--topology",
             "buck_integrated",
             "--vin-min",
-            "8",
+            "7",
             "--vin-max",
-            "36",
+            "22",
             "--vout",
             "3.3",
             "--iout",
@@ -189,13 +193,13 @@ def test_cli_analyze_design_c(capsys: pytest.CaptureFixture[str]) -> None:
             "--fsw",
             "400e3",
             "--ta",
-            "40",
+            "20",
         ]
     )
     out = capsys.readouterr().out
     assert rc == 0
     assert "Stage buck_integrated" in out and "rail sw    = NetC3_1" in out
-    assert "FAIL" in out and "cap_ceramic_voltage" in out and "PROMPT U3 p_loss" in out
+    assert "WARN" in out and "cap_ceramic_voltage" in out and "PROMPT U3 p_loss" in out
 
 
 def test_cli_analyze_no_match_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
@@ -209,9 +213,9 @@ def test_cli_analyze_no_match_returns_1(capsys: pytest.CaptureFixture[str]) -> N
             "--topology",
             "buck",
             "--vin-min",
-            "8",
+            "7",
             "--vin-max",
-            "36",
+            "22",
             "--vout",
             "3.3",
             "--iout",

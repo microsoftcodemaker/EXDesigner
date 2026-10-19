@@ -8,7 +8,7 @@
             the derating table. Example:
             python -m dfr analyze --bom tests/fixtures/design_c/design_c.BomDoc
                 --netlist tests/fixtures/design_c/design_c_protel.net --topology buck_integrated
-                --vin-min 8 --vin-max 36 --vout 3.3 --iout 3.25 --fsw 400e3 --ta 40
+                --vin-min 7 --vin-max 22 --vout 3.3 --iout 3.25 --fsw 400e3 --ta 20
 """
 
 from __future__ import annotations

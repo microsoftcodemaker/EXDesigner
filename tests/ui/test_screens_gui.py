@@ -83,8 +83,9 @@ def test_full_tier1_flow_through_screens(window) -> None:
     window.open_screen("conditions")
     cond = window._open["conditions"]
     assert cond.inferred_labels["L"].text().startswith("1e-05 H")
-    cond.vin_min.setValue(8)
-    cond.vin_max.setValue(36)
+    cond.vin_min.setValue(7)
+    cond.vin_max.setValue(22)
+    cond.ta.setValue(20)
     cond.iout.setValue(3.25)
     cond.fsw.setValue(400)
     cond.do_apply()
@@ -95,7 +96,7 @@ def test_full_tier1_flow_through_screens(window) -> None:
     res = window._open["results"]
     res.do_run()
     assert vm.workspace.last_outcome is not None and vm.workspace.last_outcome.ok
-    assert "1 FAIL" in res.summary.text()
+    assert "0 FAIL, 2 WARN" in res.summary.text()
     assert res.table.topLevelItemCount() == 9 and res.prompts.topLevelItemCount() == 1
     assert (
         vm.step_status["analyze"] is StepStatus.DONE
@@ -104,10 +105,10 @@ def test_full_tier1_flow_through_screens(window) -> None:
     assert window.status_tier.text() == "Tier mix: T1 38  T2 0  (0% T2)"
     res.table.setCurrentItem(res.table.topLevelItem(0))
     sel = vm.selection.value
-    assert sel is not None and sel.kind == "derating" and sel.payload.status is DeratingStatus.FAIL
+    assert sel is not None and sel.kind == "derating" and sel.payload.status is DeratingStatus.WARN
 
     res.filter.setCurrentText("PASS")
-    assert res.table.topLevelItemCount() == 3
+    assert res.table.topLevelItemCount() == 4
 
 
 def test_conditions_rejects_invalid_spec(window) -> None:
@@ -135,8 +136,9 @@ def test_stress_table_manual_entry_and_prompt_answer(window) -> None:
     circ.do_confirm()
     window.open_screen("conditions")
     cond = window._open["conditions"]
-    cond.vin_min.setValue(8)
-    cond.vin_max.setValue(36)
+    cond.vin_min.setValue(7)
+    cond.vin_max.setValue(22)
+    cond.ta.setValue(20)
     cond.iout.setValue(3.25)
     cond.do_apply()
     window.open_screen("results")
