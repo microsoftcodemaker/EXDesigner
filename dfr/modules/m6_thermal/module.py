@@ -151,6 +151,18 @@ def run(ctx: RunContext) -> StepResult:
     return StepResult.from_sink(sink, thermal=results)
 
 
+def load_results(session: Session, run_id: int) -> list[ThermalResult]:
+    from sqlalchemy import select  # noqa: PLC0415
+
+    rows = session.scalars(select(ThermalResultRow).where(ThermalResultRow.run_id == run_id))
+    return [
+        ThermalResult(
+            part_id=r.part_id, scenario=r.scenario, tj=r.tj, tc=r.tc, runaway_flag=r.runaway_flag
+        )
+        for r in rows
+    ]
+
+
 def persist(session: Session, run_id: int, result: StepResult) -> dict[str, Any] | None:
     import json  # noqa: PLC0415
 
@@ -182,7 +194,7 @@ MODULE = ModuleSpec(
     optional=True,
     step=run,
     persist=persist,
-    services={"solve_thermal": solve_thermal},
+    services={"solve_thermal": solve_thermal, "load_thermal_results": load_results},
     migrations_path=Path(__file__).parent / "migrations",
     table_prefix="m6_",
 )

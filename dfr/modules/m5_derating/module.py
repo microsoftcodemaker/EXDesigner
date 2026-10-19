@@ -9,7 +9,7 @@ from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from dfr.api import API_VERSION, DiagnosticSink, ModuleSpec, RunContext, StepResult
-from dfr.core.contracts import DeratingResult
+from dfr.core.contracts import DeratingResult, DeratingStatus
 from dfr.core.db.base import Base
 from dfr.modules.m5_derating.checker import evaluate_derating
 from dfr.modules.m5_derating.ruleset import MODULE_ID, load_ruleset, load_ruleset_file
@@ -68,6 +68,28 @@ def run(ctx: RunContext) -> StepResult:
     return StepResult.from_sink(sink, derating=results, ruleset_hash=ruleset.sha256)
 
 
+def load_results(session: Session, run_id: int) -> list[DeratingResult]:
+    """Stored derating rows for a run (used by reporting and compare screens)."""
+    from sqlalchemy import select  # noqa: PLC0415
+
+    rows = session.scalars(select(DeratingResultRow).where(DeratingResultRow.run_id == run_id))
+    return [
+        DeratingResult(
+            part_id=r.part_id,
+            param=r.param,
+            stress=r.stress,
+            limit=r.limit,
+            rating=r.rating,
+            ratio=r.ratio,
+            status=DeratingStatus(r.status),
+            margin=r.margin,
+            rule_id=r.rule_id,
+            stress_value_ids=tuple(int(i) for i in r.stress_value_ids.split(",") if i),
+        )
+        for r in rows
+    ]
+
+
 def persist(session: Session, run_id: int, result: StepResult) -> dict[str, Any] | None:
     rows: list[DeratingResult] = result.outputs.get("derating", [])
     for r in rows:
@@ -101,7 +123,11 @@ MODULE = ModuleSpec(
     optional=False,
     step=run,
     persist=persist,
-    services={"load_ruleset": load_ruleset, "load_ruleset_file": load_ruleset_file},
+    services={
+        "load_ruleset": load_ruleset,
+        "load_ruleset_file": load_ruleset_file,
+        "load_derating_results": load_results,
+    },
     migrations_path=Path(__file__).parent / "migrations",
     table_prefix="m5_",
 )

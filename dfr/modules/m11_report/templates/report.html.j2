@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ cover.design_name }} — Design for Reliability report</title>
+<style>
+  body { font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; font-size: 10.5pt; color: #1a1a1a; margin: 24px; }
+  h1 { font-size: 20pt; margin: 0 0 4px 0; }
+  h2 { font-size: 14pt; border-bottom: 1px solid #999; padding-bottom: 3px; margin-top: 28px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 12px 0; }
+  th, td { border: 1px solid #bbb; padding: 3px 6px; text-align: left; vertical-align: top; }
+  th { background: #eee; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  .num { text-align: right; white-space: nowrap; }
+  .badge, .src { display: inline-block; font-size: 8pt; font-weight: 600; border: 1px solid #555; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+  .badge.t1 { color: #1b6ea3; } .badge.t2 { color: #8a3b73; }
+  .status { font-weight: 700; }
+  .status.pass { color: #007a59; } .status.warn { color: #b36b00; } .status.fail { color: #b23c00; } .status.unknown { color: #666; }
+  .muted { color: #666; }
+  .disclaimer { border: 1px solid #b36b00; padding: 8px; background: #fff8e8; }
+  .cover-table td:first-child { width: 180px; font-weight: 600; }
+  .section { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+{% macro num(value, tier, source, fmt="%.4g") -%}
+  <span class="value">{{ fmt % value if value is not none else "—" }}</span><span class="badge t{{ tier }}">T{{ tier }}</span><span class="src">{{ source_labels.get(source, source) }}</span>
+{%- endmacro %}
+
+<h1>{{ cover.design_name }}</h1>
+<p class="muted">Design for Reliability report · generated {{ cover.generated_at }} · DfR Toolkit {{ cover.tool_version }}</p>
+
+{% for section in sections %}
+<div class="section">
+<h2>{{ loop.index }}. {{ section.title }}</h2>
+{{ section.html | safe }}
+</div>
+{% endfor %}
+
+<h2>Disclaimer</h2>
+<p class="disclaimer">All values are <strong>estimates</strong> produced by the listed models from the listed inputs.
+Tier 1 (T1) values come from ideal steady-state closed-form equations and can underestimate stress
+(switch-node ringing, start-up and load transients, DCM boundary, parasitic effects). Tier 2 (T2) values
+were supplied by the user from measurement or an external simulator. This report is not a safety certification.</p>
+</body>
+</html>
