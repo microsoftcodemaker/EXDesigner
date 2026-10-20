@@ -110,7 +110,7 @@ class StressScreen(QWidget):
         layout.addWidget(split, 1)
         vm.design_version_id.changed.connect(lambda _: self.reload())
         vm.workspace.changed.connect(
-            lambda what: self.reload() if what in ("run", "reloaded") else None
+            lambda what: self.reload() if what in ("run", "reloaded", "t2_input") else None
         )
         self.reload()
 
@@ -275,8 +275,7 @@ class StressScreen(QWidget):
         )
         self._repo().answer_prompt(pid, sv)
         self.vm.commit()
-        self.vm.refresh_runs()
-        self.vm.mark_downstream_stale("conditions")
+        self.vm.workspace.note_t2_input()
         self.reload()
 
 

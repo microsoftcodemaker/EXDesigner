@@ -18,9 +18,11 @@ from dfr.core.contracts import (
     RoleEdit,
     RoleProposal,
     RunConfig,
+    SessionState,
     Severity,
     Stage,
     StageStatus,
+    Tier,
 )
 from dfr.core.db.repos import DesignRepo, PartRepo, StageRepo
 from dfr.ui.viewmodels.observable import Signal
@@ -98,6 +100,7 @@ class Workspace:
         self.last_outcome = None
         self._post(out.diagnostics)
         self.shell.open_design(out.design_id)
+        self.shell.workflow_state.set(SessionState.DRAFT)
         self.shell.set_step("parts", StepStatus.DONE)
         self.shell.set_step("circuit", StepStatus.READY)
         self.changed.emit("imported")
@@ -181,6 +184,7 @@ class Workspace:
         self.shell.set_step("circuit", StepStatus.DONE)
         self.shell.set_step("conditions", StepStatus.READY)
         self.shell.mark_downstream_stale("circuit")
+        self.shell.workflow_state.set(SessionState.CIRCUIT_CONFIRMED)
         self.changed.emit("confirmed")
         return stage
 
@@ -206,7 +210,13 @@ class Workspace:
         self.shell.mark_downstream_stale("conditions")
         self.changed.emit("spec")
 
-    def run_tier1(self, config: RunConfig | None = None) -> Any | None:
+    def run_tier1(
+        self,
+        config: RunConfig | None = None,
+        *,
+        parent_run_id: int | None = None,
+        tier_level: Tier = Tier.T1,
+    ) -> Any | None:
         from dfr.app import AnalysisInputs, run_tier1  # noqa: PLC0415
         from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
 
@@ -224,11 +234,80 @@ class Workspace:
         inputs = AnalysisInputs(
             vid, self.spec, config or RunConfig(), inferred_overrides=self.spec_overrides or None
         )
-        outcome = run_tier1(self.session, self.registry, inputs, clock=self.shell.clock)
+        if parent_run_id is not None:
+            self.shell.workflow_state.set(SessionState.RERUN)
+        else:
+            self.shell.workflow_state.set(SessionState.T1_RUNNING)
+        outcome = run_tier1(
+            self.session,
+            self.registry,
+            inputs,
+            clock=self.shell.clock,
+            parent_run_id=parent_run_id,
+            tier_level=tier_level,
+        )
         self.shell.commit()
         self.last_outcome = outcome
         self._post(outcome.diagnostics)
         self.shell.refresh_runs()
         self.shell.set_step("analyze", StepStatus.DONE if outcome.ok else StepStatus.READY)
+        if outcome.ok:
+            self.shell.set_step("refine", StepStatus.READY)
+            self.shell.workflow_state.set(SessionState.TRIAGED)
+        else:
+            self.shell.workflow_state.set(
+                SessionState.CIRCUIT_CONFIRMED if parent_run_id is None else SessionState.T2_QUEUED
+            )
         self.changed.emit("run")
         return outcome
+
+    # ----------------------------------------------------------------- refine (T35-T37)
+    def rerun(self, config: RunConfig | None = None) -> Any | None:
+        """Tier 2 re-run on the effective values; the new run points at the last one."""
+        parent = self.shell.current_run_id.value
+        if parent is None:
+            self.shell.post(
+                Diagnostic(
+                    code="UI_NO_RUN",
+                    severity=Severity.ERROR,
+                    module="ui",
+                    message="run Tier 1 before re-running",
+                )
+            )
+            return None
+        return self.run_tier1(config, parent_run_id=parent, tier_level=Tier.T2)
+
+    def note_t2_input(self) -> None:
+        """A prompt was answered or Tier 2 rows imported: results are stale until re-run."""
+        from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
+
+        self.shell.refresh_runs()
+        self.shell.mark_downstream_stale("conditions")
+        if self.shell.current_run_id.value is not None:
+            self.shell.workflow_state.set(SessionState.T2_QUEUED)
+            self.shell.set_step("refine", StepStatus.READY)
+        self.changed.emit("t2_input")
+
+    def import_t2_csv(self, data: str, name: str) -> Any | None:
+        vid = self.shell.design_version_id.value
+        if vid is None or not self.registry.has_service("import_t2_csv"):
+            return None
+        svc = self.registry.service("import_t2_csv")
+        out = svc(self.session, self.shell.clock, vid, data, name)
+        self._post(out.diagnostics)
+        if out.ok:
+            self.shell.commit()
+            self.note_t2_input()
+        else:
+            self.session.rollback()
+        return out
+
+    def mark_final(self) -> None:
+        from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
+
+        if self.shell.current_run_id.value is None:
+            return
+        self.shell.workflow_state.set(SessionState.FINAL)
+        self.shell.set_step("refine", StepStatus.DONE)
+        self.shell.set_step("report", StepStatus.READY)
+        self.changed.emit("final")

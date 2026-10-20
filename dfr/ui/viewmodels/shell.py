@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from dfr.core.contracts import Diagnostic, Severity
+from dfr.core.contracts import Diagnostic, SessionState, Severity
 from dfr.core.db import migrate
 from dfr.core.db.base import MEMORY_URL, create_sqlite_engine, sqlite_url
 from dfr.core.db.repos import DesignRepo, RunRepo, StressRepo
@@ -87,6 +87,8 @@ class ShellViewModel:
         self.palette_name: Property[str] = Property("dark")
         self.active_step: Property[str] = Property("design")
         self.selection: Property[Selection | None] = Property(None)
+        # PRD 2.6 tiered-workflow state machine; the stepper is a coarser view of it.
+        self.workflow_state: Property[SessionState] = Property(SessionState.DRAFT)
         self.step_status: dict[str, StepStatus] = {k: StepStatus.NOT_STARTED for k, _ in STEPS}
         self.step_status["design"] = StepStatus.READY
         self.steps_changed: Signal[dict[str, StepStatus]] = Signal()
@@ -131,6 +133,8 @@ class ShellViewModel:
             )
             return
         version = repo.latest_version(design_id)
+        if design_id != self.design_id.value:
+            self.workflow_state.set(SessionState.DRAFT)
         self.design_id.set(design_id)
         self.design_version_id.set(version.id if version else None)
         self.set_step("design", StepStatus.DONE)
@@ -170,6 +174,8 @@ class ShellViewModel:
             self.set_step("analyze", StepStatus.DONE)
             self.set_step("refine", StepStatus.READY)
             self.set_step("report", StepStatus.READY)
+            if self.workflow_state.value in (SessionState.DRAFT, SessionState.CIRCUIT_CONFIRMED):
+                self.workflow_state.set(SessionState.TRIAGED)
 
     # ----------------------------------------------------------------- stepper
     def set_step(self, step: str, status: StepStatus) -> None:

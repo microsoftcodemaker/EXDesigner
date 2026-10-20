@@ -48,9 +48,14 @@ Imports go down only (import-linter contract "Layers"). Modules are mutually ind
 | `prompts`, `inferred_values`, `template_params` | M2 | `list[ValuePrompt]`, `InferredValues`, `dict` |
 | `ruleset_hash` | M5 | `str` |
 
+| `triage_context` | M3 (`run_context` service) | `dict` with `waivers`, `open_prompts` |
+
 Seeded by the app layer (`dfr.app.analysis.run_tier1`) before the run: `stage`, `role_map`,
-`converter_spec`, `templates`, `ruleset`, optional `inferred_overrides`, `part_params`.
-Steps may declare `optional_requires` for ordering without a hard dependency (M5 after M6).
+`converter_spec`, `templates`, `ruleset`, optional `inferred_overrides`, `part_params`, plus
+whatever every `run_context(session, design_version_id)` service returns (a module's way to
+read its own stored per-version state, e.g. M3 waivers, without the orchestrator knowing it).
+Steps may declare `optional_requires` for ordering without a hard dependency (M5 after M6,
+M3 after M5/M6/M2).
 
 New modules add rows here when they introduce a capability.
 
@@ -62,8 +67,10 @@ every topology plugin's `topology.patterns`). Current names: `import_bom`, `impo
 `join_netlist`, `prune_dnp`, `resolve_pin_functions`, `save_pinout`, `persist_design` (M1);
 `available_patterns`, `match_topology`, `apply_edits`, `confirm_roles`, `role_map_for`,
 `check_staleness`, `prefill_from_stale` (M12); `infer_passives`, `compute_template_stress`,
-`answer_prompt`, `manual_stress` (M2); `load_ruleset`, `load_derating_results` (M5);
-`solve_thermal`, `load_thermal_results` (M6); `build_report_html`, `write_report_html`,
+`answer_prompt`, `manual_stress`, `import_t2_csv`, `parse_t2_csv` (M2); `load_ruleset`,
+`load_derating_results` (M5); `solve_thermal`, `load_thermal_results` (M6);
+`load_triage_config`, `load_refinement_items`, `load_triage_waivers`, `waive_refinement`,
+`unwaive_refinement`, `run_context` (M3); `build_report_html`, `write_report_html`,
 `load_report_bundle` (M11); `topology.patterns`, `topology.templates`, `topology.inference`
 (each topology folder). A module's own result rows are persisted by its `persist` hook and read
 back only through its services, so M11 never imports M5/M6.

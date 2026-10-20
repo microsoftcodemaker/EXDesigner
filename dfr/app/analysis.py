@@ -56,6 +56,10 @@ def run_tier1(
         extra["part_params"] = inputs.part_params
     if registry.has_service("load_ruleset"):
         extra["ruleset"] = registry.service("load_ruleset")(inputs.config.ruleset_id)
+    # Modules that need stored per-version state at run time (waivers, open prompts, ...)
+    # expose a ``run_context(session, design_version_id) -> Mapping`` service.
+    for provider in registry.services_named("run_context"):
+        extra.update(provider(session, inputs.design_version_id))
 
     orch = Orchestrator(session, registry.modules, clock=clock)
     outcome = orch.run_analysis(

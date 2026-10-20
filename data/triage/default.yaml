@@ -1,0 +1,64 @@
+# Default triage thresholds and ranking weights (PRD 3.3, TRI-01).
+# EVERY number here is an initial value marked verify: tune after validation on real boards.
+#   score = w1 * clamp(1 - margin/margin_threshold, 0, 1)            (F1 low margin)
+#         + w2 * clamp(1 - (Tjmax - Tj)/tj_proximity_threshold, 0, 1) (F2 thermal proximity)
+#         + w3 * clamp(1 - life/target, 0, 1)                          (F3, needs M7; not yet scored)
+#         + w4 * blind_spot_weight                                     (F4 closed-form blind spot)
+# F0 (no rating) scores like a fully exhausted margin so missing data is never buried.
+id: default
+version: 1
+description: Initial triage thresholds and weights from PRD 3.3 (all values verify)
+source: "PRD section 3.3 ranking defaults (w1=0.35, w2=0.25, w3=0.25, w4=0.15) (verify)"
+thresholds:
+  margin: 0.15            # F1: flag when margin < 15 % of the derated limit (verify)
+  tj_proximity_c: 20.0    # F2: flag when Tjmax - Tj < 20 degC (verify)
+  mode_boundary: 0.20     # F5: Iout within +-20 % of the CCM/DCM edge (verify; needs template param)
+weights:
+  w1_margin: 0.35
+  w2_thermal: 0.25
+  w3_lifetime: 0.25
+  w4_blind_spot: 0.15
+  no_data: 1.0            # F0: multiplier on w1 for a missing rating (verify)
+# F4 closed-form blind-spot table (PRD 3.3). A row applies when the part holds the role in the
+# listed topology family and a Tier 1 value exists for the parameter. "how" is tool-neutral.
+blind_spots:
+  - id: sw_vds_ringing
+    topologies: [buck, buck_integrated, boost, buck_boost, flyback]
+    roles: [high_side_switch, low_side_switch, ic]
+    param: v_peak
+    stat: peak
+    scenario: vin_max
+    weight: 1.0
+    reason: "switch-node voltage ringing is not in the closed-form equations (hard-switched)"
+    how: "peak drain-source (or SW pin) voltage at turn-off, Vin_max, Iout_max; scope with short ground lead or simulator with layout parasitics"
+    source: "PRD 3.3 F4 blind-spot table (verify)"
+  - id: input_cap_inrush
+    topologies: [buck, buck_integrated, boost, buck_boost, flyback]
+    roles: [input_cap]
+    param: i_peak
+    stat: peak
+    scenario: startup
+    weight: 0.6
+    reason: "power-up inrush into the input capacitors is not a steady-state quantity"
+    how: "peak input capacitor current at hot plug / enable, Vin_max; current probe or simulator with source impedance"
+    source: "PRD 3.3 F4 blind-spot table (verify)"
+  - id: inductor_isat_load_step
+    topologies: [buck, buck_integrated, boost, buck_boost]
+    roles: [inductor]
+    param: i_peak
+    stat: peak
+    scenario: load_step
+    weight: 0.8
+    reason: "inductor peak current during a load step can exceed the steady-state ripple peak"
+    how: "peak inductor current for the worst load step at Vin_max; current probe or transient simulation"
+    source: "PRD 3.3 F4 blind-spot table (verify)"
+  - id: output_diode_piv
+    topologies: [boost, flyback]
+    roles: [catch_diode]
+    param: v_peak
+    stat: peak
+    scenario: vin_max
+    weight: 0.8
+    reason: "reverse-recovery ringing adds to the output-diode PIV"
+    how: "peak reverse voltage across the diode at turn-off, Vin_max"
+    source: "PRD 3.3 F4 blind-spot table (verify)"

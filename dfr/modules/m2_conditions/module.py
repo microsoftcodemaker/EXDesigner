@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from dfr.api import API_VERSION, DiagnosticSink, ModuleSpec, RunContext, StepResult
 from dfr.core.contracts import InferredValues, Stage, StressValue, ValuePrompt
 from dfr.core.db.repos import StressRepo
+from dfr.modules.m2_conditions.csv_import import import_t2_csv, parse_t2_csv
 from dfr.modules.m2_conditions.infer import MODULE_ID, infer_passives
 from dfr.modules.m2_conditions.service import answer_prompt, compute_template_stress, manual_stress
 
@@ -80,7 +81,14 @@ def persist(session: Session, run_id: int, result: StepResult) -> dict[str, Any]
     prompts: list[ValuePrompt] = result.outputs.get("prompts", [])
     stored = repo.add_many(stress)
     version_id = _version_of(session, stress)
-    stored_prompts = [repo.add_prompt(version_id, p) for p in prompts] if version_id else prompts
+    if version_id is None:
+        return {"stress": stored, "prompts": prompts}
+    # A re-run must not ask the same question twice: keep the prompt that is still open.
+    open_by_key = {(p.part_id, p.param, p.scenario): p for p in repo.open_prompts(version_id)}
+    stored_prompts = [
+        open_by_key.get((p.part_id, p.param, p.scenario)) or repo.add_prompt(version_id, p)
+        for p in prompts
+    ]
     return {"stress": stored, "prompts": stored_prompts}
 
 
@@ -109,5 +117,7 @@ MODULE = ModuleSpec(
         "compute_template_stress": compute_template_stress,
         "answer_prompt": answer_prompt,
         "manual_stress": manual_stress,
+        "import_t2_csv": import_t2_csv,
+        "parse_t2_csv": parse_t2_csv,
     },
 )

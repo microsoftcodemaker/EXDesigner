@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exdesigner/schemas/triage.schema.json",
+  "title": "Triage thresholds, weights and blind-spot table",
+  "type": "object",
+  "required": ["id", "version", "thresholds", "weights", "blind_spots"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "source": { "type": "string" },
+    "thresholds": {
+      "type": "object",
+      "required": ["margin", "tj_proximity_c"],
+      "additionalProperties": false,
+      "properties": {
+        "margin": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "tj_proximity_c": { "type": "number", "exclusiveMinimum": 0 },
+        "mode_boundary": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "required": ["w1_margin", "w2_thermal", "w3_lifetime", "w4_blind_spot"],
+      "additionalProperties": false,
+      "properties": {
+        "w1_margin": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w2_thermal": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w3_lifetime": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w4_blind_spot": { "type": "number", "minimum": 0, "maximum": 1 },
+        "no_data": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 }
+      }
+    },
+    "blind_spots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "topologies", "roles", "param", "stat", "scenario", "weight", "reason", "how", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "topologies": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "roles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "param": { "type": "string" },
+          "stat": { "type": "string", "enum": ["peak", "rms", "avg", "min", "dc"] },
+          "scenario": { "type": "string" },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+          "reason": { "type": "string" },
+          "how": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    }
+  }
+}

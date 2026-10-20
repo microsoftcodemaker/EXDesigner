@@ -146,12 +146,19 @@ def test_stress_table_manual_entry_and_prompt_answer(window) -> None:
 
     window.open_screen("stress")
     st = window._open["stress"]
-    assert st.table.topLevelItemCount() == 38 and st.prompts.topLevelItemCount() == 1
+    # 1 prompt from M2 (U3 p_loss); M3, when present, adds one per blind spot (4 for Design C).
+    m3_prompts = 4 if "m3_triage" in vm.present_modules else 0
+    assert st.table.topLevelItemCount() == 38 and st.prompts.topLevelItemCount() == 1 + m3_prompts
     st.only_effective.setCurrentIndex(1)
     assert st.table.topLevelItemCount() == 38  # all T1 rows are effective so far
 
     # Answer the IC-loss prompt with a measured value: it becomes a T2 effective row.
-    prompt_id = int(st.prompts.topLevelItem(0).data(0, Qt.ItemDataRole.UserRole))
+    m2_row = next(
+        st.prompts.topLevelItem(i)
+        for i in range(st.prompts.topLevelItemCount())
+        if st.prompts.topLevelItem(i).text(5) == "m2"
+    )
+    prompt_id = int(m2_row.data(0, Qt.ItemDataRole.UserRole))
     repo_prompt = next(
         p for p in st._repo().open_prompts(vm.design_version_id.value) if p.id == prompt_id
     )
@@ -161,7 +168,7 @@ def test_stress_table_manual_entry_and_prompt_answer(window) -> None:
     st._repo().answer_prompt(prompt_id, sv)
     vm.commit()
     st.reload()
-    assert st.prompts.topLevelItemCount() == 0
+    assert st.prompts.topLevelItemCount() == m3_prompts
     assert st.table.topLevelItemCount() == 39
     assert (
         window.status_tier.text() == "Tier mix: T1 38  T2 0  (0% T2)"

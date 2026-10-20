@@ -70,6 +70,7 @@ class FailureRateResult(BaseModel):
 
 
 class RefinementItem(BaseModel):
+    id: int | None = None  # database id once persisted (additive, v1)
     part_id: int
     flags: list[str]
     reasons: list[str]
