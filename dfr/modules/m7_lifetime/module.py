@@ -26,7 +26,9 @@ from dfr.core.contracts import (
     ThermalResult,
 )
 from dfr.core.db.base import Base
+from dfr.core.db.repos import RunRepo
 from dfr.core.extension import LifetimeModel
+from dfr.core.ports import SystemClock
 from dfr.modules.m7_lifetime.constants import (
     MODULE_ID,
     LifetimeConstants,
@@ -34,6 +36,7 @@ from dfr.modules.m7_lifetime.constants import (
     load_constants_file,
 )
 from dfr.modules.m7_lifetime.models import LifetimeContext, default_models
+from dfr.modules.m7_lifetime.report import sections
 
 VERSION = "0.1.0"
 
@@ -178,6 +181,15 @@ def load_results(session: Session, run_id: int) -> list[LifetimeResult]:
     ]
 
 
+def bundle_extras(session: Session, run_id: int) -> dict[str, Any]:
+    """Rows for the report section: lifetime results and the profile the run was made with."""
+    run = RunRepo(session, SystemClock()).get(run_id)
+    return {
+        "lifetime": load_results(session, run_id),
+        "mission_profile": run.config.mission_profile if run is not None else None,
+    }
+
+
 MODULE = ModuleSpec(
     id=MODULE_ID,
     name="Lifetime models",
@@ -194,6 +206,8 @@ MODULE = ModuleSpec(
         "load_lifetime_constants": load_constants,
         "load_lifetime_constants_file": load_constants_file,
         "load_lifetime_results": load_results,
+        "report.bundle_extras": bundle_extras,
+        "report.sections": sections,
     },
     migrations_path=Path(__file__).parent / "migrations",
     table_prefix="m7_",

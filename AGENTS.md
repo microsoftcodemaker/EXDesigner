@@ -35,7 +35,9 @@ Imports go downward only. A module never imports another module; they exchange
 - **Screen**: folder `dfr/ui/screens/<id>/screen.py` with `SCREEN: ScreenSpec` and `build(vm)`.
   Hidden when `SCREEN.requires` modules are absent. Views call registry services only.
 - **Report section**: a `(ReportSectionSpec, render)` pair returned by a module's
-  `report.sections` service; `render(RunBundle) -> str` and every number goes through `num()`.
+  `report.sections` service; `render(RunBundle) -> str` and every number goes through
+  `dfr.api.num()`. Rows the section needs come from the module's own
+  `report.bundle_extras(session, run_id) -> dict` service (merged into `RunBundle.extras`).
 - **Service**: add a callable to `ModuleSpec.services`; consumers use `registry.service(name)`.
   Never import another module's package, not even from the UI.
 - **Contract change**: additive fields go in `contracts/v1`; breaking changes create

@@ -98,6 +98,12 @@ def test_full_tier1_flow_through_screens(window) -> None:
     assert vm.workspace.last_outcome is not None and vm.workspace.last_outcome.ok
     assert "0 FAIL, 2 WARN" in res.summary.text()
     assert res.table.topLevelItemCount() == 9 and res.prompts.topLevelItemCount() == 1
+    if "m8_failure_rate" in vm.present_modules:  # shipped tables are empty: n/a, never a number
+        assert "mil_hdbk_217f n/a" in res.summary.text()
+    if "m7_lifetime" in vm.present_modules:  # Design C has no vendor life data: 19 x n/a
+        assert res.lifetime.topLevelItemCount() == 19
+        assert res.lifetime.topLevelItem(0).text(2) == "not available"
+        assert "0 estimate(s), 19 not available" in res.lifetime_label.text()
     assert (
         vm.step_status["analyze"] is StepStatus.DONE
         and vm.step_status["report"] is StepStatus.READY

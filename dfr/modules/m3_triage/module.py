@@ -24,6 +24,7 @@ from dfr.core.db.types import UtcDateTime
 from dfr.core.ports import Clock, SystemClock
 from dfr.modules.m3_triage.config import MODULE_ID, load_config, load_config_file
 from dfr.modules.m3_triage.engine import Waiver, triage
+from dfr.modules.m3_triage.report import sections
 
 VERSION = "0.1.0"
 
@@ -213,6 +214,11 @@ def run_context(session: Session, design_version_id: int) -> dict[str, Any]:
     }
 
 
+def bundle_extras(session: Session, run_id: int) -> dict[str, Any]:
+    """Rows for the report section (waived items keep their reason, TRI-03)."""
+    return {"refinement": load_results(session, run_id)}
+
+
 MODULE = ModuleSpec(
     id=MODULE_ID,
     name="Risk triage",
@@ -240,6 +246,8 @@ MODULE = ModuleSpec(
         "waive_refinement": waive,
         "unwaive_refinement": unwaive,
         "run_context": run_context,
+        "report.bundle_extras": bundle_extras,
+        "report.sections": sections,
     },
     migrations_path=Path(__file__).parent / "migrations",
     table_prefix="m3_",

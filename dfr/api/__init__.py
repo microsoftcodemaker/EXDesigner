@@ -12,9 +12,11 @@ from dfr.core.extension import (
     TopologyTemplate,
 )
 from dfr.core.registry.spec import ModuleSpec, RunContext, ServiceNotFound, StepResult
+from dfr.core.report import SOURCE_LABELS, muted, num, table
 
 __all__ = [
     "API_VERSION",
+    "SOURCE_LABELS",
     "ChartSpec",
     "DiagnosticSink",
     "FailureRateModel",
@@ -27,4 +29,7 @@ __all__ = [
     "StepResult",
     "TopologyPattern",
     "TopologyTemplate",
+    "muted",
+    "num",
+    "table",
 ]

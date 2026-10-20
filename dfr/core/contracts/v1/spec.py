@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from dfr.core.contracts.v1.enums import PromptOrigin, PromptStatus
@@ -71,3 +73,29 @@ class RunConfig(BaseModel):
     enabled_modules: tuple[str, ...] | None = None  # None = every discovered module
     iteration_cap: int = 3
     extra: dict[str, str] = Field(default_factory=dict)
+
+    # Additive v1: the spec and mission profile a run was made with travel in ``extra`` as JSON
+    # so a stored run (report, reopen) can recover them without the UI session.
+    SPEC_KEY: ClassVar[str] = "converter_spec"
+    PROFILE_KEY: ClassVar[str] = "mission_profile"
+
+    def with_inputs(self, spec: ConverterSpec, profile: MissionProfile | None) -> RunConfig:
+        return self.model_copy(
+            update={
+                "extra": {
+                    **self.extra,
+                    self.SPEC_KEY: spec.model_dump_json(),
+                    self.PROFILE_KEY: (profile or MissionProfile()).model_dump_json(),
+                }
+            }
+        )
+
+    @property
+    def converter_spec(self) -> ConverterSpec | None:
+        raw = self.extra.get(self.SPEC_KEY)
+        return ConverterSpec.model_validate_json(raw) if raw else None
+
+    @property
+    def mission_profile(self) -> MissionProfile | None:
+        raw = self.extra.get(self.PROFILE_KEY)
+        return MissionProfile.model_validate_json(raw) if raw else None

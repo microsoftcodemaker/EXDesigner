@@ -20,8 +20,9 @@ from dfr.core.contracts import (
     ThermalResult,
 )
 from dfr.core.extension import ReportSectionSpec
+from dfr.core.report import SOURCE_LABELS, num, table
 
-SOURCE_LABELS = {"equation": "eq", "manual": "man", "measured": "meas", "simulated": "sim"}
+_table = table
 STATUS_ORDER = {
     DeratingStatus.FAIL: 0,
     DeratingStatus.WARN: 1,
@@ -55,26 +56,6 @@ class RunBundle:
             return 1, "equation"
         worst = max(rows, key=lambda v: int(v.tier))
         return int(worst.tier), worst.source.value
-
-
-def num(value: float | None, tier: int, source: str, fmt: str = "{:.4g}") -> str:
-    text = fmt.format(value) if value is not None else "—"
-    return (
-        f'<span class="value">{text}</span><span class="badge t{tier}">T{tier}</span>'
-        f'<span class="src">{SOURCE_LABELS.get(source, source)}</span>'
-    )
-
-
-def _table(headers: list[str], rows: list[list[str]], classes: list[str] | None = None) -> str:
-    classes = classes or [""] * len(headers)
-    head = "".join(f"<th>{escape(h)}</th>" for h in headers)
-    body = "".join(
-        "<tr>"
-        + "".join(f'<td class="{classes[i]}">{cell}</td>' for i, cell in enumerate(r))
-        + "</tr>"
-        for r in rows
-    )
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
 
 
 def _status(s: DeratingStatus) -> str:
@@ -275,3 +256,5 @@ SECTIONS: list[tuple[ReportSectionSpec, RenderFn]] = [
         render_diagnostics,
     ),
 ]
+
+__all__ = ["SECTIONS", "SOURCE_LABELS", "RunBundle", "num"]

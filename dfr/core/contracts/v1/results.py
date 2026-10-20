@@ -67,6 +67,13 @@ class FailureRateResult(BaseModel):
     reliability_curve: list[tuple[float, float]] | None = None  # (t_hours, R)
     assumptions: list[str] = Field(default_factory=list)
     excluded_part_ids: list[int] = Field(default_factory=list)
+    # Additive v1 (M8): wear-out roll-ups report MTTF and B10 instead of an MTBF (MTB-04);
+    # every result names the table it used and that table's confidence.
+    system_mttf_h: float | None = None
+    b10_h: float | None = None
+    table_id: str | None = None
+    confidence: Confidence | None = None
+    excluded_reasons: dict[int, str] = Field(default_factory=dict)
 
 
 class RefinementItem(BaseModel):

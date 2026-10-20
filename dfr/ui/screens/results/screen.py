@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -90,12 +92,30 @@ class ResultsScreen(QWidget):
         self.prompts.setRootIsDecorated(False)
         bl.addWidget(self.prompts)
         split.addWidget(bottom)
-        split.setSizes([600, 200])
+        split.addWidget(self._build_lifetime_pane())
+        split.setSizes([500, 150, 150])
         layout.addWidget(split, 1)
         self.ws.changed.connect(
             lambda what: self.refresh() if what in ("run", "reloaded") else None
         )
         self.refresh()
+
+    def _build_lifetime_pane(self) -> QWidget:
+        self.lifetime = QTreeWidget()
+        self.lifetime.setHeaderLabels(
+            ["Part", "Mechanism", "Life", "Confidence", "Model", "Assumptions"]
+        )
+        self.lifetime.setRootIsDecorated(False)
+        self.lifetime.setAlternatingRowColors(True)
+        box = QWidget()
+        bl = QVBoxLayout(box)
+        bl.setContentsMargins(0, 0, 0, 0)
+        self.lifetime_label = QLabel("Lifetime (M7)")
+        self.lifetime_label.setWordWrap(True)
+        bl.addWidget(self.lifetime_label)
+        bl.addWidget(self.lifetime)
+        box.setVisible("m7_lifetime" in self.vm.present_modules)
+        return box
 
     def do_run(self) -> None:
         self.ws.run_tier1()
@@ -120,6 +140,7 @@ class ResultsScreen(QWidget):
             f"{counts[DeratingStatus.PASS]} PASS; {len(thermal)} thermal rows; "
             f"{len(out.context.get_or('stress', []))} stress values (T1). "
             f"Pipeline: {', '.join(out.pipeline.ids)}"
+            + _failure_rate_line(out.context.get_or("failure_rate", []))
         )
         want = self.filter.currentText()
         effective = out.context.get_or("effective_stress", {})
@@ -167,6 +188,39 @@ class ResultsScreen(QWidget):
             )
         for i in range(4):
             self.prompts.resizeColumnToContents(i)
+        self._fill_lifetime(out, parts)
+
+    def _fill_lifetime(self, out: Any, parts: dict[int | None, Any]) -> None:
+        self.lifetime.clear()
+        rows = list(out.context.get_or("lifetime", []))
+        estimates = [r for r in rows if r.life_hours is not None]
+        target = self.ws.profile.target_life_hours
+        self.lifetime_label.setText(
+            f"Lifetime (M7): {len(estimates)} estimate(s), {len(rows) - len(estimates)} not "
+            f"available; target {self.ws.profile.target_life_years:g} y. Missing vendor data is "
+            "never guessed: add l0_hours/t0_rated, l1_hours/v1_test/t1_test, mating_cycles or "
+            "theta ratings in the Catalog (docs/catalog_format.md)."
+        )
+        palette = PALETTES[self.vm.palette_name.value]
+        for r in sorted(rows, key=lambda r: (r.life_hours is None, r.life_hours or 0.0)):
+            part = parts.get(r.part_id)
+            years = r.life_years
+            item = QTreeWidgetItem(
+                [
+                    part.refdes if part else str(r.part_id),
+                    r.mechanism,
+                    f"{years:.1f} y" if years is not None else "not available",
+                    r.confidence.value,
+                    r.model_id,
+                    "; ".join(r.assumptions),
+                ]
+            )
+            if r.life_hours is not None:
+                status = "fail" if r.life_hours < target else "pass"
+                item.setForeground(2, QColor(status_color(palette, status)))
+            self.lifetime.addTopLevelItem(item)
+        for i in range(5):
+            self.lifetime.resizeColumnToContents(i)
 
     def _selected(self) -> None:
         items = self.table.selectedItems()
@@ -213,6 +267,22 @@ class ResultsScreen(QWidget):
 
 def _num(x: float | None) -> str:
     return f"{x:.4g}" if x is not None else "-"
+
+
+def _failure_rate_line(results: list[Any]) -> str:
+    """One clause per M8 method: MTBF for constant-rate tables, MTTF/B10 for PoF, else n/a."""
+    if not results:
+        return ""
+    bits = []
+    for r in results:
+        if r.system_mtbf_h is not None:
+            bits.append(f"{r.method} MTBF {r.system_mtbf_h / 8766:.1f} y")
+        elif r.system_mttf_h is not None:
+            b10 = f", B10 {r.b10_h / 8766:.1f} y" if r.b10_h is not None else ""
+            bits.append(f"{r.method} MTTF {r.system_mttf_h / 8766:.1f} y{b10}")
+        else:
+            bits.append(f"{r.method} n/a ({len(r.excluded_part_ids)} parts excluded)")
+    return ". Failure rate: " + "; ".join(bits)
 
 
 def build(vm: ShellViewModel) -> QWidget:

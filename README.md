@@ -10,11 +10,13 @@ import, buck topology recognition with confirmation, Tier 1 equations, derating,
 lifetime models (M7: electrolytic/polymer temperature rule, MLCC Prokopowicz–Vaskas,
 Coffin–Manson + Miner thermal cycling, connector mating; constants in `data/models/lifetime`,
 all `verify`; missing vendor data → "not available"), risk triage (M3: F0–F4 flags, PRD 3.3
-ranking, waivers, Tier 2 prompts), Tier 2 CSV import, re-runs with parent links, Compare
-Runs, immutable runs, HTML/PDF report, and an Altium-style PySide6 desktop app. Formats:
-Altium `.BomDoc` + Protel netlist. Packaging: `python scripts/build_installer.py` (PyInstaller
-one-folder; Inno Setup script in `packaging/`, needs ISCC installed). Not yet: failure rate
-(M8), other topologies, FMEA (M9), lifetime rows in the Results screen/report.
+ranking, waivers, Tier 2 prompts), failure rate (M8: table-driven parts-stress engine for
+MIL-HDBK-217F / SR-332 — shipped with empty tables, see `docs/failure_rate_tables.md` — plus a
+PoF Weibull roll-up of M7 lives with MTTF/B10), Tier 2 CSV import, re-runs with parent links,
+Compare Runs, immutable runs, HTML/PDF report with triage/lifetime/failure-rate sections, and an
+Altium-style PySide6 desktop app. Formats: Altium `.BomDoc` + Protel netlist. Packaging:
+`python scripts/build_installer.py` (PyInstaller one-folder; Inno Setup script in `packaging/`,
+needs ISCC installed). Not yet: other topologies, FMEA (M9), failure-rate screen.
 
 ## Quick start (development)
 

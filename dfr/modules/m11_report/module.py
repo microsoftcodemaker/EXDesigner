@@ -2,7 +2,9 @@
 
 PDF rendering (QtWebEngine printToPdf) lives in the UI layer; this module is Qt-free.
 Result rows of other modules are read through their services (``load_derating_results``,
-``load_thermal_results``) so M11 imports no module package.
+``load_thermal_results``) so M11 imports no module package. Any module can add rows for its own
+sections with a ``report.bundle_extras(session, run_id) -> dict`` service (merged into
+``RunBundle.extras``) and sections with a ``report.sections() -> [(spec, render)]`` service.
 """
 
 from __future__ import annotations
@@ -54,6 +56,9 @@ def load_bundle(
     parent = None
     if run.parent_run_id is not None and depth > 0:
         parent = load_bundle(session, registry, run.parent_run_id, clock, depth=depth - 1)
+    extras: dict[str, Any] = {}
+    for provider in registry.services_named("report.bundle_extras"):
+        extras.update(provider(session, run_id))
     return RunBundle(
         run=run,
         parts=parts,
@@ -64,6 +69,7 @@ def load_bundle(
         diagnostics=DiagnosticRepo(session).for_run(run_id),
         ruleset_id=run.ruleset_id,
         parent=parent,
+        extras=extras,
     )
 
 

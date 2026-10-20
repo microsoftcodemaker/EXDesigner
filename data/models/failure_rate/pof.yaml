@@ -1,0 +1,22 @@
+# Physics-of-failure Weibull roll-up (PRD 3.8, MTB-03) over M7 lifetime results.
+#   R_i(t) = exp[-(t / eta_i)^beta_i]      eta_i from the M7 life, beta per mechanism
+#   R_sys(t) = product_i R_i(t);  MTTF = integral R_sys dt (trapezoid on a log grid);  B10 at R = 0.9
+# No MTBF is reported for this method (wear-out is not constant-rate, MTB-04).
+# Every beta is a seed default marked verify, low confidence; replace with test data per mechanism.
+id: pof
+method: pof_weibull
+version: 1
+description: "Seed Weibull shape factors per M7 mechanism; all verify"
+source: "PRD 3.8 PoF block: beta user/default, verify per mechanism"
+confidence: low
+life_is: eta               # an M7 life is read as the characteristic life (63.2 % failed); or b10
+default_beta: 2.0
+mechanisms:
+  electrolyte_dry_out:     { beta: 3.0, source: "typical wear-out shape for electrolytics (verify)" }
+  wear_out:                { beta: 3.0, source: "polymer capacitors, assumed as electrolytic (verify)" }
+  dielectric_wear_out:     { beta: 2.5, source: "MLCC voltage/temperature ageing (verify)" }
+  thermal_cycling_fatigue: { beta: 5.0, source: "bond-wire / solder fatigue, steep wear-out (verify)" }
+  contact_wear:            { beta: 2.0, source: "connector mating wear (verify)" }
+grid:
+  t_min_h: 1.0
+  points: 400

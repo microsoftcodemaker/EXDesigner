@@ -9,7 +9,7 @@ a `source` citation. Values not yet checked against a primary source are marked 
 | `rulesets/` | derating rule sets (`generic_conservative`, `generic_commercial`, `space_reference`) | M5 |
 | `triage/` | triage thresholds, ranking weights and the F4 blind-spot table (`default`) | M3 |
 | `models/lifetime/` | wear-out model constants (`default`: temperature rules, Prokopowicz-Vaskas n/Ea, Coffin-Manson A/n) | M7 |
-| `models/` | failure-rate constants (MIL-HDBK-217F / SR-332 tables are never committed) | M8 |
+| `models/failure_rate/` | failure-rate tables: `mil_hdbk_217f`, `sr_332` (shipped with **empty** `classes`; see `docs/failure_rate_tables.md`), `pof` (Weibull betas per M7 mechanism) | M8 |
 | `pinmaps/` | pin-function maps keyed by MPN / LibRef + footprint | M1 |
 | `fmea/` | failure-mode library by part class | M9 |
 | `schemas/` | JSON Schemas for the above | with each |

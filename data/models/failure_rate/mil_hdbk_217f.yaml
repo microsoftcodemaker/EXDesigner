@@ -1,0 +1,21 @@
+# MIL-HDBK-217F Notice 2 parts-stress tables (PRD 3.8, MTB-01).
+#
+# SHIPPED EMPTY on purpose (owner decision): base rates and pi tables are never transcribed
+# from memory. Fill `classes` from the handbook following docs/failure_rate_tables.md, or drop a
+# complete file of the same format next to this one (DFR_DATA_DIR/models/failure_rate/). While
+# `classes` is empty every part is excluded with reason "no table entry" and the system rate is
+# "not available" -- never a guessed number.
+id: mil_hdbk_217f
+method: parts_stress
+version: 1
+standard: "MIL-HDBK-217F Notice 2 (1995)"
+description: "Parts-stress method; lp = lb * product(pi factors), failures per 1e6 h"
+source: "MIL-HDBK-217F Notice 2 -- values must be transcribed by the user (verify every value)"
+license: "US DoD handbook, public; tables deliberately not transcribed here"
+confidence: low
+rate_unit: per_1e6_h
+defaults:
+  environment: GB          # ground benign; pi_E lookup key
+  quality: commercial      # pi_Q lookup key
+  kb_ev_per_k: 8.617e-5
+classes: {}

@@ -97,6 +97,14 @@ def test_report_html_every_number_has_tier_and_source(
     assert 'badge t2">T2' in html and ">meas<" in html  # the measured C2 value made it in
     assert f"refines run #{first.run.id}" in html and "Before" in html  # refinement section
     assert "not a safety certification" in html
+    present = {m.id for m in reg.modules}
+    if "m3_triage" in present:  # module sections reach the report through report.bundle_extras
+        assert "Risk triage and refinement plan" in html and "sw_vds_ringing" in html
+    if "m7_lifetime" in present:
+        assert "Lifetime estimates" in html and "19 not available" in html
+    assert (
+        second.run.config.converter_spec == SPEC and second.run.config.mission_profile is not None
+    )
     del values
 
 

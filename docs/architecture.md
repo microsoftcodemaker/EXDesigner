@@ -43,7 +43,7 @@ Imports go down only (import-linter contract "Layers"). Modules are mutually ind
 | `thermal` | M6 | `list[ThermalResult]` |
 | `derating` | M5 | `list[DeratingResult]` |
 | `lifetime` | M7 | `list[LifetimeResult]` |
-| `failure_rate` | M8 | `FailureRateResult` |
+| `failure_rate` | M8 | `list[FailureRateResult]` (one per table/method, never summed across methods) |
 | `refinement` | M3 | `list[RefinementItem]` |
 | `prompts`, `inferred_values`, `template_params` | M2 | `list[ValuePrompt]`, `InferredValues`, `dict` |
 | `ruleset_hash` | M5 | `str` |
@@ -72,10 +72,19 @@ every topology plugin's `topology.patterns`). Current names: `import_bom`, `impo
 `load_derating_results` (M5); `solve_thermal`, `load_thermal_results` (M6);
 `load_triage_config`, `load_refinement_items`, `load_triage_waivers`, `waive_refinement`,
 `unwaive_refinement`, `run_context` (M3); `estimate_lifetimes`, `load_lifetime_constants`,
-`load_lifetime_results` (M7); `build_report_html`, `write_report_html`,
-`load_report_bundle` (M11); `topology.patterns`, `topology.templates`, `topology.inference`
-(each topology folder). A module's own result rows are persisted by its `persist` hook and read
-back only through its services, so M11 never imports M5/M6.
+`load_lifetime_results` (M7); `compute_failure_rates`, `load_failure_rate_tables`,
+`load_failure_rate_table_file`, `load_failure_rate_results` (M8); `build_report_html`,
+`write_report_html`, `load_report_bundle` (M11); `topology.patterns`, `topology.templates`,
+`topology.inference` (each topology folder). A module's own result rows are persisted by its
+`persist` hook and read back only through its services, so M11 never imports M5/M6.
+
+Report fan-out: a module contributes `report.bundle_extras(session, run_id) -> dict` (merged
+into `RunBundle.extras` by M11's `load_bundle`) and `report.sections() -> [(ReportSectionSpec,
+render)]`; `render(bundle)` formats numbers with `dfr.api.num` / `table` (shared helpers in
+`dfr.core.report`, so no module imports M11). M3, M7 and M8 use this.
+
+The spec and mission profile a run was made with are stored in the run row
+(`RunConfig.with_inputs`, read back via `RunConfig.converter_spec` / `.mission_profile`).
 
 ## Database
 
@@ -98,7 +107,7 @@ back only through its services, so M11 never imports M5/M6.
 | `TopologyPattern` / `TopologyTemplate` | M12 / M2 | `TopologyRegistry` from a topology folder |
 | `LifetimeModel` / `FailureRateModel` | M7 / M8 | model lists inside those modules |
 | `ScreenSpec` | GUI stepper | `SCREENS` in `module.py` |
-| `ReportSectionSpec` | M11 | `REPORT_SECTIONS` in `module.py` |
+| `ReportSectionSpec` | M11 | `report.sections` service (+ `report.bundle_extras` for rows) |
 | `ChartSpec` | GUI + report | returned by modules in their results |
 
 Every plugin result is stamped `tool = "<module_id>@<version>"` (`ModuleSpec.tool_tag`).

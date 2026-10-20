@@ -71,11 +71,12 @@ def run_tier1(
     # expose a ``run_context(session, design_version_id) -> Mapping`` service.
     for provider in registry.services_named("run_context"):
         extra.update(provider(session, inputs.design_version_id))
+    config = inputs.config.with_inputs(inputs.spec, inputs.profile)
 
     orch = Orchestrator(session, registry.modules, clock=clock)
     outcome = orch.run_analysis(
         inputs.design_version_id,
-        inputs.config,
+        config,
         overrides=overrides,
         parent_run_id=parent_run_id,
         tier_level=tier_level,

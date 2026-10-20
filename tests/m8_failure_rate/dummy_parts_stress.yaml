@@ -1,0 +1,41 @@
+# DUMMY parts-stress table for tests only. Values are invented round numbers, NOT MIL-HDBK-217F.
+id: dummy_parts_stress
+method: parts_stress
+version: 1
+standard: "dummy"
+source: "tests/m8_failure_rate/dummy_parts_stress.yaml (invented numbers)"
+confidence: low
+rate_unit: per_1e6_h
+defaults:
+  environment: GB
+  quality: commercial
+  kb_ev_per_k: 8.617e-5
+classes:
+  capacitor:
+    default:
+      lambda_b: 0.02
+      factors:
+        piT: { kind: arrhenius, ea_ev: 0.35 }
+        piV: { kind: stress_ratio, param: v_dc, rating: v_rated, curve: [[0.0, 1.0], [0.5, 1.0], [1.0, 2.0]] }
+        piQ: { kind: lookup, by: quality, table: { M: 1.0, commercial: 10.0 } }
+        piE: { kind: lookup, by: environment, table: { GB: 1.0, GF: 2.0 } }
+    ceramic:
+      lambda_b: 0.01
+      factors:
+        piC: { kind: value_curve, log: true, curve: [[1.0e-9, 1.0], [1.0e-3, 10.0]] }
+        piQ: { kind: constant, value: 3.0 }
+  inductor:
+    default:
+      lambda_b: 0.05
+      factors:
+        piQ: { kind: lookup, by: quality, table: { M: 1.0 } }   # no 'commercial' row, no default -> excluded
+  ic:
+    default:
+      form: ic_sum
+      c1: 0.01
+      c2: 0.005
+      factors:
+        piT: { kind: arrhenius, ea_ev: 0.7, requires_tj: true }
+        piE: { kind: lookup, by: environment, table: { GB: 1.0 } }
+        piQ: { kind: constant, value: 2.0 }
+        piL: { kind: constant, value: 1.0 }

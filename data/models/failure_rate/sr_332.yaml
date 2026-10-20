@@ -1,0 +1,19 @@
+# Telcordia SR-332 Method I structure (PRD 3.8, MTB-02): lambda_SS = lG * piQ * piS * piT (FIT).
+#
+# SR-332 is a LICENSED document: this file ships with an empty `classes` map and must never be
+# committed with Telcordia values. Licensees import their own tables in the format described in
+# docs/failure_rate_tables.md (lG goes in `lambda_b`, piQ/piS/piT in `factors`).
+id: sr_332
+method: parts_stress
+version: 1
+standard: "Telcordia SR-332 Issue 4 (2016) Method I (verify issue)"
+description: "Steady-state device failure rate, FIT; tables user-imported"
+source: "Telcordia SR-332 -- licensed, user-imported tables only"
+license: "Telcordia/Ericsson licensed material; not redistributable"
+confidence: low
+rate_unit: fit
+defaults:
+  environment: ground_fixed_controlled
+  quality: level_2
+  kb_ev_per_k: 8.617e-5
+classes: {}
