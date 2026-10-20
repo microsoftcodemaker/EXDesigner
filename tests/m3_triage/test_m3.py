@@ -194,6 +194,53 @@ def test_thermal_proximity_f2_and_missing_tjmax(cfg) -> None:
     assert triage([q], [], cfg, thermal=[ThermalResult(part_id=1, scenario="n", tj=100.0)]) == []
 
 
+def test_lifetime_shortfall_f3_and_no_data(cfg) -> None:
+    from dfr.core.contracts import Confidence, LifetimeResult, MissionProfile
+
+    c10, c11, q1 = part(1, "C10"), part(2, "C11"), part(3, "Q1", PartClass.TRANSISTOR)
+    life = [
+        LifetimeResult(
+            part_id=1,
+            mechanism="electrolyte_dry_out",
+            model_id="m",
+            life_hours=5 * 8766,
+            confidence=Confidence.LOW,
+        ),
+        LifetimeResult(
+            part_id=2,
+            mechanism="dielectric_wear_out",
+            model_id="m",
+            life_hours=None,
+            confidence=Confidence.LOW,
+            assumptions=("not available: no vendor data",),
+        ),
+        LifetimeResult(
+            part_id=3,
+            mechanism="thermal_cycling_fatigue",
+            model_id="m",
+            life_hours=50 * 8766,
+            confidence=Confidence.LOW,
+        ),
+    ]
+    items = {
+        i.part_id: i
+        for i in triage(
+            [c10, c11, q1], [], cfg, lifetime=life, profile=MissionProfile(target_life_years=10)
+        )
+    }
+    assert items[1].flags == ["F3"] and items[1].score == pytest.approx(
+        0.25 * 0.5
+    )  # w3 * (1 - 5/10)
+    assert "life 5.0 y < target 10 y (low confidence" in items[1].reasons[0]
+    assert items[2].flags == ["F0"] and items[2].score == pytest.approx(
+        0.125
+    )  # w3 * no_lifetime_data
+    assert "not available: no vendor data" in items[2].reasons[0]
+    assert 3 not in items  # 50 y >= target
+    waived = triage([c10], [], cfg, lifetime=life[:1], waivers=[Waiver(1, "F3", "spares planned")])
+    assert waived[0].status == "waived" and waived[0].waiver_reason == "spares planned"
+
+
 # ----------------------------------------------------------------------------- F4 prompts (TRI-06)
 
 

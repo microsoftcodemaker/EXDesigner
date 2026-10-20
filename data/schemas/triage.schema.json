@@ -29,7 +29,8 @@
         "w2_thermal": { "type": "number", "minimum": 0, "maximum": 1 },
         "w3_lifetime": { "type": "number", "minimum": 0, "maximum": 1 },
         "w4_blind_spot": { "type": "number", "minimum": 0, "maximum": 1 },
-        "no_data": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 }
+        "no_data": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 },
+        "no_lifetime_data": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 }
       }
     },
     "blind_spots": {

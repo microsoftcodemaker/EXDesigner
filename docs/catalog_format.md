@@ -87,8 +87,11 @@ Use these exact names. Unknown names are stored and shown but no rule or model r
 | capacitor | `v_rated` | V | derating `cap_*_voltage` |
 | capacitor | `i_ripple` | A | derating `cap_elec_ripple` (electrolytic ripple rating at temperature) |
 | capacitor | `esr` | ohm | M2 ESR_eq for output ripple voltage; lifetime (v1) |
-| capacitor (electrolytic, v1) | `l0_hours`, `t0_rated`, `dt0_core` | h, degC, K | lifetime 10-degree rule |
-| capacitor (MLCC, v1) | `dc_bias_curve` (future, separate file) | — | DC-bias C_eff |
+| capacitor (electrolytic / polymer) | `l0_hours`, `t0_rated` | h, degC | M7 temperature rule (required; otherwise "not available") |
+| capacitor (electrolytic / polymer) | `dt0_core` | K | M7 rated core rise; seed default used when absent (low confidence) |
+| capacitor (MLCC) | `l1_hours`, `v1_test`, `t1_test` | h, V, degC | M7 Prokopowicz-Vaskas qualification point (required) |
+| capacitor (MLCC, future) | `dc_bias_curve` (separate file) | — | DC-bias C_eff |
+| connector | `mating_cycles` | "" | M7 connector life = rated / matings per year |
 | resistor | `p_rated` | W | derating `res_power` |
 | resistor | `t_knee` | degC | start of the power derating slope (typ. 70) |
 | resistor | `v_rated` | V | derating `res_voltage` |

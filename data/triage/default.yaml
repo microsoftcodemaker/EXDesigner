@@ -2,7 +2,7 @@
 # EVERY number here is an initial value marked verify: tune after validation on real boards.
 #   score = w1 * clamp(1 - margin/margin_threshold, 0, 1)            (F1 low margin)
 #         + w2 * clamp(1 - (Tjmax - Tj)/tj_proximity_threshold, 0, 1) (F2 thermal proximity)
-#         + w3 * clamp(1 - life/target, 0, 1)                          (F3, needs M7; not yet scored)
+#         + w3 * clamp(1 - life/target, 0, 1)                          (F3 lifetime shortfall, M7)
 #         + w4 * blind_spot_weight                                     (F4 closed-form blind spot)
 # F0 (no rating) scores like a fully exhausted margin so missing data is never buried.
 id: default
@@ -19,6 +19,7 @@ weights:
   w3_lifetime: 0.25
   w4_blind_spot: 0.15
   no_data: 1.0            # F0: multiplier on w1 for a missing rating (verify)
+  no_lifetime_data: 0.5   # F0: multiplier on w3 when a lifetime model lacks vendor data (verify)
 # F4 closed-form blind-spot table (PRD 3.3). A row applies when the part holds the role in the
 # listed topology family and a Tier 1 value exists for the parameter. "how" is tool-neutral.
 blind_spots:

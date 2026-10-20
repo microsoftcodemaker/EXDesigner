@@ -27,6 +27,26 @@ class ConverterSpec(BaseModel):
         return self
 
 
+class MissionProfile(BaseModel):
+    """Usage assumptions for lifetime models (PRD 3.6/3.7). Additive v1 contract.
+
+    Defaults describe continuous operation with one power cycle per day; every analysis shows
+    the profile it used, so a default is an explicit assumption rather than a hidden guess.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    target_life_years: float = Field(default=10.0, gt=0)
+    operating_hours_per_year: float = Field(default=8766.0, gt=0, le=8766.0)
+    on_off_cycles_per_year: float = Field(default=365.0, ge=0)
+    mating_cycles_per_year: float = Field(default=0.0, ge=0)
+    t_ambient_off: float | None = None  # ambient when powered down; None = same as operating
+
+    @property
+    def target_life_hours(self) -> float:
+        return self.target_life_years * 8766.0
+
+
 class ValuePrompt(BaseModel):
     """A number the app needs but will not guess (PRD section 3.2 mode d)."""
 

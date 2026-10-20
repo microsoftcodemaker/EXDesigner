@@ -48,6 +48,7 @@ class TriageConfig:
     w3_lifetime: float = 0.25
     w4_blind_spot: float = 0.15
     no_data: float = 1.0
+    no_lifetime_data: float = 0.5
     blind_spots: list[BlindSpot] = field(default_factory=list)
     description: str = ""
     source: str = ""
@@ -90,6 +91,7 @@ def load_config_file(path: Path) -> TriageConfig:
         w3_lifetime=float(w["w3_lifetime"]),
         w4_blind_spot=float(w["w4_blind_spot"]),
         no_data=float(w.get("no_data", 1.0)),
+        no_lifetime_data=float(w.get("no_lifetime_data", 0.5)),
         blind_spots=[
             BlindSpot(
                 id=b["id"],

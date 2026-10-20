@@ -63,7 +63,8 @@ def test_refine_screen_flow(window, tmp_path) -> None:
     assert vm.workflow_state.value is SessionState.TRIAGED
     assert "Triaged" in ref.state.text() and ref.rerun_btn.isEnabled()
     ranked = [ref.table.topLevelItem(i).text(1) for i in range(ref.table.topLevelItemCount())]
-    assert ranked == ["U3", "L1", "C2", "C1"]
+    # With M7 present every part lacking vendor lifetime data adds a low-score F0 item after these.
+    assert ranked[:4] == ["U3", "L1", "C2", "C1"]
     assert ref.table.topLevelItem(0).text(4) == "F0, F1, F4:sw_vds_ringing"
     assert ref.prompts.topLevelItemCount() == 5  # 1 from M2 (U3 p_loss) + 4 from M3 blind spots
     origins = {ref.prompts.topLevelItem(i).text(6) for i in range(5)}

@@ -14,6 +14,7 @@ from typing import Any
 from dfr.core.contracts import (
     ConverterSpec,
     Diagnostic,
+    MissionProfile,
     PinoutRequest,
     RoleEdit,
     RoleProposal,
@@ -48,6 +49,7 @@ class Workspace:
         self.stage: Stage | None = None
         self.spec: ConverterSpec | None = None
         self.spec_overrides: dict[str, float] = {}
+        self.profile: MissionProfile = MissionProfile()
         self.last_outcome: Any | None = None  # dfr.app.orchestrator.RunOutcome
         self.changed: Signal[str] = Signal()  # emits the name of what changed
 
@@ -200,11 +202,18 @@ class Workspace:
         self.changed.emit("pinout")
 
     # ----------------------------------------------------------------- conditions + run (T22/T23)
-    def set_spec(self, spec: ConverterSpec, overrides: dict[str, float]) -> None:
+    def set_spec(
+        self,
+        spec: ConverterSpec,
+        overrides: dict[str, float],
+        profile: MissionProfile | None = None,
+    ) -> None:
         from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
 
         self.spec = spec
         self.spec_overrides = dict(overrides)
+        if profile is not None:
+            self.profile = profile
         self.shell.set_step("conditions", StepStatus.DONE)
         self.shell.set_step("analyze", StepStatus.READY)
         self.shell.mark_downstream_stale("conditions")
@@ -232,7 +241,11 @@ class Workspace:
             )
             return None
         inputs = AnalysisInputs(
-            vid, self.spec, config or RunConfig(), inferred_overrides=self.spec_overrides or None
+            vid,
+            self.spec,
+            config or RunConfig(),
+            inferred_overrides=self.spec_overrides or None,
+            profile=self.profile,
         )
         if parent_run_id is not None:
             self.shell.workflow_state.set(SessionState.RERUN)

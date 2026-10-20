@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exdesigner/schemas/lifetime.schema.json",
+  "title": "Lifetime model constants",
+  "type": "object",
+  "required": ["id", "version", "electrolytic", "polymer", "mlcc", "thermal_cycling", "connector"],
+  "additionalProperties": false,
+  "$defs": {
+    "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+    "capacitor_rule": {
+      "type": "object",
+      "required": ["degrees_per_doubling", "default_dt0_core_k", "life_cap_years", "source", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "degrees_per_doubling": { "type": "number", "exclusiveMinimum": 0 },
+        "default_dt0_core_k": { "type": "number", "minimum": 0 },
+        "life_cap_years": { "type": "number", "exclusiveMinimum": 0 },
+        "end_of_life": { "type": "string" },
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "pv": {
+      "type": "object",
+      "required": ["n", "ea_ev"],
+      "additionalProperties": false,
+      "properties": {
+        "n": { "type": "number", "minimum": 0, "maximum": 10 },
+        "ea_ev": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "cm": {
+      "type": "object",
+      "required": ["a", "n"],
+      "additionalProperties": false,
+      "properties": {
+        "a": { "type": "number", "exclusiveMinimum": 0 },
+        "n": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  },
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "source": { "type": "string" },
+    "electrolytic": { "$ref": "#/$defs/capacitor_rule" },
+    "polymer": { "$ref": "#/$defs/capacitor_rule" },
+    "mlcc": {
+      "type": "object",
+      "required": ["kb_ev_per_k", "dielectrics", "default", "source", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "kb_ev_per_k": { "type": "number", "exclusiveMinimum": 0 },
+        "dielectrics": { "type": "object", "additionalProperties": { "$ref": "#/$defs/pv" } },
+        "default": { "$ref": "#/$defs/pv" },
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "thermal_cycling": {
+      "type": "object",
+      "required": ["classes", "min_delta_tj_k", "source", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "classes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/cm" } },
+        "min_delta_tj_k": { "type": "number", "minimum": 0 },
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "connector": {
+      "type": "object",
+      "required": ["source", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    }
+  }
+}

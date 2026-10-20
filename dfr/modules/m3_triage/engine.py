@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from dfr.core.contracts import (
     DeratingResult,
     DeratingStatus,
+    LifetimeResult,
+    MissionProfile,
     Part,
     PromptOrigin,
     RefinementItem,
@@ -63,6 +65,8 @@ def triage(
     *,
     effective: Mapping[StressKey, StressValue] | None = None,
     thermal: list[ThermalResult] | None = None,
+    lifetime: list[LifetimeResult] | None = None,
+    profile: MissionProfile | None = None,
     topology: str | None = None,
     roles: RoleMap | None = None,
     existing_prompts: Iterable[ValuePrompt] = (),
@@ -91,6 +95,9 @@ def triage(
         worst_tj = tj_by_part.get(part.id)
         if worst_tj is not None:
             _flag_thermal(part, worst_tj, cfg, waived, acc)
+        for lr in lifetime or []:
+            if lr.part_id == part.id:
+                _flag_lifetime(part, lr, profile or MissionProfile(), cfg, waived, acc)
         if roles is not None and topology is not None:
             part_roles = {role for role, refs in roles.roles.items() if part.refdes in refs}
             for spot in cfg.spots_for(topology, part_roles):
@@ -211,6 +218,43 @@ def _flag_thermal(
     assert acc.params is not None and acc.scenarios is not None
     acc.params.append("p_loss")
     acc.scenarios.append(t.scenario)
+
+
+def _flag_lifetime(  # noqa: PLR0917
+    part: Part,
+    lr: LifetimeResult,
+    profile: MissionProfile,
+    cfg: TriageConfig,
+    waived: Mapping[tuple[int, str], str],
+    acc: _Acc,
+) -> None:
+    """F3 = w3 * clamp(1 - life/target); a model without vendor data is F0 (never a pass)."""
+    pid = part.id or 0
+    if lr.life_hours is None:
+        if (pid, "F0") in waived:
+            _waive(acc, "F0")
+        else:
+            why = lr.assumptions[0] if lr.assumptions else "no data"
+            _add(
+                acc,
+                "F0",
+                f"{part.refdes}: {lr.mechanism} life {why} ({lr.model_id})",
+                cfg.w3_lifetime * cfg.no_lifetime_data,
+            )
+        return
+    target = profile.target_life_hours
+    if lr.life_hours >= target:
+        return
+    if (pid, "F3") in waived:
+        _waive(acc, "F3")
+        return
+    _add(
+        acc,
+        "F3",
+        f"{part.refdes}: {lr.mechanism} life {lr.life_hours / 8766:.1f} y < target "
+        f"{profile.target_life_years:g} y ({lr.confidence.value} confidence, {lr.model_id})",
+        cfg.w3_lifetime * clamp01(1.0 - lr.life_hours / target),
+    )
 
 
 def _flag_blind_spot(  # noqa: PLR0917

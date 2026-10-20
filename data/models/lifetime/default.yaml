@@ -1,0 +1,48 @@
+# Lifetime model constants (PRD 3.7, LIF-01..04). EVERY value is a seed default marked verify
+# with LOW confidence until replaced by vendor data; results print the source and confidence.
+# Part-specific data (L0/T0, qualification points, mating cycles) come from the part catalog
+# ratings (docs/catalog_format.md), never from this file.
+id: default
+version: 1
+description: Seed constants for the wear-out models; all values verify, low confidence
+source: "PRD section 3.7 formulas and typical ranges (verify)"
+electrolytic:
+  degrees_per_doubling: 10.0      # manufacturer 10-degree rule L = L0 * 2^((T0 - Tcore)/10)
+  default_dt0_core_k: 5.0         # rated core rise when the datasheet gives none (~5 K typical)
+  life_cap_years: 15.0            # L_final = min(L, L_cap)
+  end_of_life: "ESR x2 or C -20 % (verify per series)"
+  source: "PRD 3.7 aluminium electrolytic block (verify)"
+  confidence: low
+polymer:
+  degrees_per_doubling: 20.0      # polymer series commonly quote a 20-degree rule (verify)
+  default_dt0_core_k: 2.0
+  life_cap_years: 15.0
+  end_of_life: "ESR x2 or C -20 % (verify per series)"
+  source: "PRD 3.7: polymer uses a different temperature exponent (verify)"
+  confidence: low
+mlcc:
+  # Prokopowicz-Vaskas: L2/L1 = (V1/V2)^n * exp[(Ea/kB) (1/T2 - 1/T1)], kB = 8.617e-5 eV/K
+  kb_ev_per_k: 8.617e-5
+  dielectrics:
+    X7R: { n: 3.0, ea_ev: 1.2 }
+    X5R: { n: 3.0, ea_ev: 1.1 }
+    X7S: { n: 3.0, ea_ev: 1.2 }
+    X8R: { n: 3.0, ea_ev: 1.2 }
+    C0G: { n: 1.5, ea_ev: 0.9 }
+    NP0: { n: 1.5, ea_ev: 0.9 }
+    Y5V: { n: 4.0, ea_ev: 1.0 }
+  default: { n: 3.0, ea_ev: 1.1 }
+  source: "PRD 3.7 MLCC block: n ~ 1.5-7, Ea ~ 0.9-1.5 eV (verify, vendor dependent)"
+  confidence: low
+thermal_cycling:
+  # Coffin-Manson Nf = A * dTj^(-n); Miner's rule D = sum(n_i / Nf_i); life = 1 / D_per_year
+  classes:
+    transistor: { a: 3.0e+11, n: 5.0 }   # bond-wire lift-off (verify)
+    diode:      { a: 3.0e+11, n: 5.0 }
+    ic:         { a: 1.0e+11, n: 4.0 }
+  min_delta_tj_k: 5.0                   # swings below this are not counted (verify)
+  source: "PRD 3.7 thermal cycling block: n ~ 4-5 for bond-wire lift-off (verify)"
+  confidence: low
+connector:
+  source: "PRD 3.7: life_years = rated_mating_cycles / mating_cycles_per_year"
+  confidence: medium

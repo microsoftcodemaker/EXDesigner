@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from dfr.core.contracts import ConverterSpec, RoleMap
+from dfr.core.contracts import ConverterSpec, MissionProfile, RoleMap
 from dfr.core.db.repos import StageRepo
 from dfr.core.extension import ScreenSpec
 from dfr.ui.kit import heading
@@ -38,7 +38,7 @@ def _spin(
 
 
 class ConditionsScreen(QWidget):
-    def __init__(self, vm: ShellViewModel) -> None:
+    def __init__(self, vm: ShellViewModel) -> None:  # noqa: PLR0915 - widget tree
         super().__init__()
         self.vm = vm
         self.ws = vm.workspace
@@ -90,6 +90,21 @@ class ConditionsScreen(QWidget):
             self.inferred_labels[name] = lab
             self.overrides[name] = edit
         layout.addWidget(inf)
+
+        prof = QGroupBox("Mission profile (lifetime models; defaults are stated assumptions)")
+        pform = QFormLayout(prof)
+        self.target_years = _spin(0.1, 100, 10.0, 1, " years")
+        self.hours_per_year = _spin(1, 8766, 8766.0, 0, " h/year")
+        self.cycles_per_year = _spin(0, 1e6, 365.0, 0, " on/off per year")
+        self.mating_per_year = _spin(0, 1e6, 0.0, 0, " matings per year")
+        for label, w in (
+            ("Target life", self.target_years),
+            ("Operating hours", self.hours_per_year),
+            ("Power cycles", self.cycles_per_year),
+            ("Connector matings", self.mating_per_year),
+        ):
+            pform.addRow(label, w)
+        layout.addWidget(prof)
 
         self.error = QLabel("")
         self.error.setProperty("role", "muted")
@@ -144,8 +159,14 @@ class ConditionsScreen(QWidget):
                 except ValueError:
                     self.error.setText(f"{name}: override must be a number in SI units")
                     return
+        profile = MissionProfile(
+            target_life_years=self.target_years.value(),
+            operating_hours_per_year=self.hours_per_year.value(),
+            on_off_cycles_per_year=self.cycles_per_year.value(),
+            mating_cycles_per_year=self.mating_per_year.value(),
+        )
         self.error.setText("")
-        self.ws.set_spec(spec, overrides)
+        self.ws.set_spec(spec, overrides, profile)
         self.error.setText("Conditions applied. Analyze step is ready.")
 
 

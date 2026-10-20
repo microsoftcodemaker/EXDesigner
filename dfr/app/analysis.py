@@ -14,7 +14,15 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from dfr.app.orchestrator import Orchestrator, RunOutcome
-from dfr.core.contracts import ConverterSpec, RunConfig, Stage, StageStatus, StressValue, Tier
+from dfr.core.contracts import (
+    ConverterSpec,
+    MissionProfile,
+    RunConfig,
+    Stage,
+    StageStatus,
+    StressValue,
+    Tier,
+)
 from dfr.core.db.repos import StageRepo
 from dfr.core.diagnostics import DiagnosticSink
 from dfr.core.ports import Clock, SystemClock
@@ -29,6 +37,7 @@ class AnalysisInputs:
     stage_id: int | None = None  # default: the latest confirmed stage of the version
     inferred_overrides: dict[str, float] | None = None
     part_params: dict[str, float] | None = None
+    profile: MissionProfile | None = None  # lifetime usage assumptions (M7); None = defaults
 
 
 def run_tier1(
@@ -54,6 +63,8 @@ def run_tier1(
         extra["inferred_overrides"] = inputs.inferred_overrides
     if inputs.part_params:
         extra["part_params"] = inputs.part_params
+    if inputs.profile is not None:
+        extra["mission_profile"] = inputs.profile
     if registry.has_service("load_ruleset"):
         extra["ruleset"] = registry.service("load_ruleset")(inputs.config.ruleset_id)
     # Modules that need stored per-version state at run time (waivers, open prompts, ...)

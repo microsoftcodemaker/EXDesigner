@@ -43,7 +43,7 @@ from dfr.core.contracts.v1.results import (
     ThermalResult,
 )
 from dfr.core.contracts.v1.run import AnalysisRun
-from dfr.core.contracts.v1.spec import ConverterSpec, RunConfig, ValuePrompt
+from dfr.core.contracts.v1.spec import ConverterSpec, MissionProfile, RunConfig, ValuePrompt
 from dfr.core.contracts.v1.stress import (
     InferredValue,
     InferredValues,
@@ -83,6 +83,7 @@ __all__ = [
     "InferredValues",
     "JoinResult",
     "LifetimeResult",
+    "MissionProfile",
     "Net",
     "NetKind",
     "NetlistComponent",

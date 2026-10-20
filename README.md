@@ -5,14 +5,16 @@ report for power electronics: derating, junction temperature, lifetime, and fail
 every number labelled by source and fidelity tier. See the PRD for scope; this repository is
 built milestone by milestone from it.
 
-**Status:** MVP complete (PRD T01–T25) plus the first v1 slice (T35–T37): BOM/netlist import,
-buck topology recognition with confirmation, Tier 1 equations, derating, thermal, risk triage
-(M3: F0/F1/F2/F4 flags, PRD 3.3 ranking, waivers, Tier 2 prompts), Tier 2 CSV import, re-runs
-with parent links, Compare Runs, immutable runs, HTML/PDF report, and an Altium-style PySide6
-desktop app (dark theme, dockable Project / Properties / Messages panels, document tabs).
-Formats: Altium `.BomDoc` + Protel netlist. Packaging: `python scripts/build_installer.py`
-(PyInstaller one-folder, ~535 MB unpacked; Inno Setup script in `packaging/`, needs ISCC
-installed). Not yet: lifetime (M7), failure rate (M8), other topologies, FMEA (M9).
+**Status:** MVP complete (PRD T01–T25) plus v1 slices T35–T37 and T29–T31: BOM/netlist
+import, buck topology recognition with confirmation, Tier 1 equations, derating, thermal,
+lifetime models (M7: electrolytic/polymer temperature rule, MLCC Prokopowicz–Vaskas,
+Coffin–Manson + Miner thermal cycling, connector mating; constants in `data/models/lifetime`,
+all `verify`; missing vendor data → "not available"), risk triage (M3: F0–F4 flags, PRD 3.3
+ranking, waivers, Tier 2 prompts), Tier 2 CSV import, re-runs with parent links, Compare
+Runs, immutable runs, HTML/PDF report, and an Altium-style PySide6 desktop app. Formats:
+Altium `.BomDoc` + Protel netlist. Packaging: `python scripts/build_installer.py` (PyInstaller
+one-folder; Inno Setup script in `packaging/`, needs ISCC installed). Not yet: failure rate
+(M8), other topologies, FMEA (M9), lifetime rows in the Results screen/report.
 
 ## Quick start (development)
 
