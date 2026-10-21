@@ -76,7 +76,11 @@ class RefineScreen(QWidget):
         tl = QVBoxLayout(top)
         tl.setContentsMargins(0, 0, 0, 0)
         row = QHBoxLayout()
-        row.addWidget(QLabel("Ranked by score = w1·margin + w2·thermal + w4·blind spot (PRD 3.3)"))
+        row.addWidget(
+            QLabel(
+                "Ranked by score = w1·margin + w2·thermal + w3·lifetime + w4·blind spot (PRD 3.3)"
+            )
+        )
         row.addStretch(1)
         self.waive_btn = QPushButton("Waive selected…")
         self.waive_btn.clicked.connect(self.waive_selected)
@@ -172,8 +176,9 @@ class RefineScreen(QWidget):
             item.setData(0, Qt.ItemDataRole.UserRole, it.part_id)
             item.setToolTip(7, "\n".join(it.reasons))
             self.table.addTopLevelItem(item)
-        for i in range(len(COLS) - 2):
+        for i in range(len(COLS)):
             self.table.resizeColumnToContents(i)
+        self.table.setColumnWidth(7, min(self.table.columnWidth(7), 520))  # full text in tooltip
         vid = self.vm.design_version_id.value
         if vid is None:
             return

@@ -46,6 +46,7 @@ class ReportScreen(QWidget):
         bar.addWidget(QLabel("Run"))
         self.runs = QComboBox()
         self.runs.setMinimumWidth(160)
+        self.runs.currentIndexChanged.connect(self._run_changed)
         bar.addWidget(self.runs)
         self.preview_btn = QPushButton("Build preview")
         self.preview_btn.clicked.connect(self.build)
@@ -72,8 +73,12 @@ class ReportScreen(QWidget):
             else QLabel("Preview needs QtWebEngine; HTML export still works.")
         )
         layout.addWidget(self.view, 1)
+        if HAVE_WEBENGINE and isinstance(self.view, QWebEngineView):
+            self.view.page().pdfPrintingFinished.connect(self._pdf_done)
         vm.design_version_id.changed.connect(lambda _: self.reload_runs())
-        vm.workspace.changed.connect(lambda what: self.reload_runs() if what == "run" else None)
+        vm.workspace.changed.connect(
+            lambda what: self.reload_runs() if what in ("run", "reloaded") else None
+        )
         self.reload_runs()
 
     def reload_runs(self) -> None:
@@ -87,6 +92,13 @@ class ReportScreen(QWidget):
             )
             self.runs.addItem(label, r.id)
         self.runs.setCurrentIndex(self.runs.count() - 1)
+
+    def _run_changed(self, _index: int) -> None:
+        """A built preview belongs to one run; exporting after a new pick rebuilds first."""
+        self.html = ""
+
+    def _pdf_done(self, path: str, ok: bool) -> None:
+        self.status.setText(f"PDF written to {path}" if ok else f"PDF export to {path} failed")
 
     def _run_id(self) -> int | None:
         data = self.runs.currentData()
@@ -140,8 +152,8 @@ class ReportScreen(QWidget):
             QPageLayout.Orientation.Portrait,
             QMarginsF(12, 12, 12, 12),
         )
+        self.status.setText(f"Writing PDF to {path}…")
         self.view.page().printToPdf(path, layout)
-        self.status.setText(f"PDF written to {path}")
 
 
 def build(vm: ShellViewModel) -> QWidget:

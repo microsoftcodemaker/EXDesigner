@@ -82,3 +82,31 @@ def parts(session: Session, design_version_id: int) -> list[Part]:
             make_part("R9", PartClass.RESISTOR, dnp=True),
         ],
     )
+
+
+@pytest.fixture(autouse=True)
+def _isolated_qsettings(request, tmp_path, monkeypatch) -> None:
+    """GUI tests must not write the user's real window layout (HKCU registry)."""
+    if "qtbot" not in request.fixturenames:
+        return
+    from PySide6.QtCore import QSettings
+
+    from dfr.ui.shell import main_window
+
+    ini = str(tmp_path / "settings.ini")
+    monkeypatch.setattr(
+        main_window.MainWindow,
+        "_settings",
+        lambda _self: QSettings(ini, QSettings.Format.IniFormat),
+    )
+
+
+def protel_netlist(components: dict[str, str], nets: dict[str, list[str]]) -> bytes:
+    """Synthetic Altium Protel netlist: ``components`` refdes -> comment, ``nets`` name -> pins
+    ("Q1-2"). For topologies without a real CAD export (the Design C fixture stays untouched)."""
+    lines: list[str] = []
+    for ref, comment in components.items():
+        lines += ["[", ref, f"FP_{ref}", comment, "", "", "", "]"]
+    for name, pins in nets.items():
+        lines += ["(", name, *pins, ")"]
+    return ("\r\n".join(lines) + "\r\n").encode("latin-1")

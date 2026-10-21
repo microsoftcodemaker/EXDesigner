@@ -33,7 +33,7 @@ from dfr.core.contracts import (
 from dfr.core.db.base import Base
 from dfr.modules.m8_failure_rate.engine import parts_stress
 from dfr.modules.m8_failure_rate.pof import weibull_rollup
-from dfr.modules.m8_failure_rate.report import sections
+from dfr.modules.m8_failure_rate.report import comparison, sections
 from dfr.modules.m8_failure_rate.tables import (
     MODULE_ID,
     PARTS_STRESS_METHOD,
@@ -208,6 +208,23 @@ def load_results(session: Session, run_id: int) -> list[FailureRateResult]:
     return out
 
 
+def run_options() -> dict[str, dict[str, list[str]]]:
+    """Per table: the environment / quality keys its lookup factors accept (default first),
+    so a UI can offer the ``fr_environment`` / ``fr_quality`` run settings without guessing."""
+    out: dict[str, dict[str, list[str]]] = {}
+    for tid, t in load_tables().items():
+        keys: dict[str, list[str]] = {"environment": [], "quality": []}
+        for entry in t.entries.values():
+            for f in entry.factors:
+                if f.kind == "lookup" and f.by in keys:
+                    keys[f.by] += [k for k in f.table if k not in keys[f.by]]
+        for name, default in (("environment", t.environment), ("quality", t.quality)):
+            if default:
+                keys[name] = [default, *(k for k in keys[name] if k != default)]
+        out[tid] = keys
+    return out
+
+
 def bundle_extras(session: Session, run_id: int) -> dict[str, Any]:
     return {"failure_rate": load_results(session, run_id)}
 
@@ -229,6 +246,8 @@ MODULE = ModuleSpec(
         "load_failure_rate_table": load_table,
         "load_failure_rate_table_file": load_table_file,
         "load_failure_rate_results": load_results,
+        "failure_rate.run_options": run_options,
+        "failure_rate.comparison": comparison,
         "report.bundle_extras": bundle_extras,
         "report.sections": sections,
     },

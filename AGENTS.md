@@ -31,7 +31,8 @@ Imports go downward only. A module never imports another module; they exchange
   branch label equals the module id). Tests in `tests/<id>/`. Nothing outside the folder changes.
   Copy `dfr/modules/_example/` to start.
 - **Topology**: new folder `dfr/topologies/<id>/` with a `TopologyPattern`, a `TopologyTemplate`
-  naming that pattern, and its data files.
+  naming that pattern; defaults in `data/topologies/<id>.yaml`. Part ratings the template needs
+  go in `part_inputs`, prompts in `prompt_specs` (M2 reads both; never edit M2 per topology).
 - **Screen**: folder `dfr/ui/screens/<id>/screen.py` with `SCREEN: ScreenSpec` and `build(vm)`.
   Hidden when `SCREEN.requires` modules are absent. Views call registry services only.
 - **Report section**: a `(ReportSectionSpec, render)` pair returned by a module's

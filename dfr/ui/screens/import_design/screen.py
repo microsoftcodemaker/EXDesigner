@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QFormLayout,
@@ -19,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from dfr.core.db.repos import DesignRepo
 from dfr.core.extension import ScreenSpec
 from dfr.ui.kit import heading
 from dfr.ui.viewmodels.shell import ShellViewModel
@@ -52,7 +54,12 @@ class ImportScreen(QWidget):
         self.topology.addItems(self.ws.topologies())
         if "buck_integrated" in self.ws.topologies():
             self.topology.setCurrentText("buck_integrated")
+        self.into_open = QCheckBox("Import as a new version of the open design")
+        self.into_open.setToolTip(
+            "Versions are append-only; earlier versions and their runs are kept"
+        )
         form.addRow("Design name", self.name)
+        form.addRow("", self.into_open)
         form.addRow("BOM", self.bom[0])
         form.addRow("Netlist", self.net[0])
         form.addRow("Topology", self.topology)
@@ -77,6 +84,18 @@ class ImportScreen(QWidget):
         bl.addWidget(QLabel("Pinouts the app will ask for on the Circuit step (never guessed):"))
         bl.addWidget(self.requests)
         layout.addWidget(box, 1)
+        vm.design_id.changed.connect(lambda _: self._sync_design())
+        self._sync_design()
+
+    def _sync_design(self) -> None:
+        """With a design open (e.g. just created on Home), import into it by default."""
+        did = self.vm.design_id.value
+        d = DesignRepo(self.vm.session, self.vm.clock).get(did) if did is not None else None
+        self.into_open.setEnabled(d is not None)
+        self.into_open.setChecked(d is not None)
+        if d is not None:
+            self.into_open.setText(f"Import as a new version of the open design {d.name!r}")
+            self.name.setText(d.name)
 
     def _picker(self, filt: str) -> tuple[QWidget, QLineEdit]:
         box = QWidget()
@@ -100,7 +119,11 @@ class ImportScreen(QWidget):
             self.summary.setText("Choose both a BOM and a netlist.")
             return
         ok = self.ws.import_files(
-            self.name.text().strip() or "Design", Path(bom), Path(net), self.topology.currentText()
+            self.name.text().strip() or "Design",
+            Path(bom),
+            Path(net),
+            self.topology.currentText(),
+            into_open=self.into_open.isChecked(),
         )
         if not ok or self.ws.imported is None:
             self.summary.setText("Import failed; see Messages.")

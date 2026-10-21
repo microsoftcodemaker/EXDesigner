@@ -6,7 +6,15 @@ from __future__ import annotations
 
 from PySide6.QtCore import QByteArray, QSettings, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
-from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QTabWidget, QToolBar, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QTabWidget,
+    QToolBar,
+    QWidget,
+)
 
 from dfr import __version__
 from dfr.ui.screens import ScreenEntry, discover_screens
@@ -48,6 +56,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.project)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.properties)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.messages)
+        self._default_dock_sizes()
 
         self._build_menus()
         self._build_status()
@@ -60,6 +69,7 @@ class MainWindow(QMainWindow):
             lambda rid: self.status_run.setText(f"run #{rid}" if rid else "no run")
         )
         vm.active_step.changed.connect(lambda _: self.project.rebuild())
+        vm.navigate.connect(self.open_screen)
         if "home" in self.screens:
             self.open_screen("home")
 
@@ -68,6 +78,17 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu("&File")
         view_menu = self.menuBar().addMenu("&View")
         help_menu = self.menuBar().addMenu("&Help")
+        for label, sid, key in (
+            ("&Designs…", "home", QKeySequence.StandardKey.Open),
+            ("&Import BOM + netlist…", "import_design", QKeySequence.StandardKey.New),
+            ("&Report…", "report", QKeySequence.StandardKey.Print),
+        ):
+            if sid in self.screens:
+                act = QAction(label, self)
+                act.setShortcut(key)
+                act.triggered.connect(lambda _=False, s=sid: self.open_screen(s))
+                file_menu.addAction(act)
+        file_menu.addSeparator()
         quit_action = QAction("E&xit", self)
         quit_action.setShortcut(QKeySequence.StandardKey.Quit)
         quit_action.triggered.connect(self.close)
@@ -83,20 +104,39 @@ class MainWindow(QMainWindow):
         reset.triggered.connect(self._reset_layout)
         view_menu.addAction(reset)
         about = QAction("About", self)
-        about.triggered.connect(lambda: self.vm.select(None))
+        about.triggered.connect(self.show_about)
         help_menu.addAction(about)
 
         bar = QToolBar("Main")
         bar.setObjectName("toolbar_main")
         bar.setMovable(False)
         self.addToolBar(bar)
-        for sid in ("home",):
+        for sid in (
+            "home",
+            "import_design",
+            "circuit",
+            "conditions",
+            "results",
+            "refine",
+            "report",
+        ):
             if sid in self.screens:
                 act = QAction(self.screens[sid].spec.title, self)
                 act.triggered.connect(lambda _=False, s=sid: self.open_screen(s))
                 bar.addAction(act)
         bar.addSeparator()
         bar.addAction(theme)
+
+    def about_text(self) -> str:
+        modules = ", ".join(sorted(self.vm.present_modules))
+        return (
+            f"<b>DfR Toolkit {__version__}</b><br>Design for Reliability analysis for power "
+            f"converters, offline.<br><br><b>Modules:</b> {modules}<br>"
+            f"<b>Screens:</b> {', '.join(e.spec.title for e in self.screens.values())}"
+        )
+
+    def show_about(self) -> None:
+        QMessageBox.about(self, "About DfR Toolkit", self.about_text())
 
     def _build_status(self) -> None:
         self.status_design = QLabel(self.vm.status_text.value)
@@ -165,6 +205,12 @@ class MainWindow(QMainWindow):
             dock.setFloating(False)
             dock.show()
             self.addDockWidget(area, dock)
+        self._default_dock_sizes()
+
+    def _default_dock_sizes(self) -> None:
+        """First-run / reset widths: stepper and Properties readable, Messages a strip."""
+        self.resizeDocks([self.project, self.properties], [220, 320], Qt.Orientation.Horizontal)
+        self.resizeDocks([self.messages], [160], Qt.Orientation.Vertical)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # Qt override
         s = self._settings()

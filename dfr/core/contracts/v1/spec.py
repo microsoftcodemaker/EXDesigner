@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -78,17 +79,27 @@ class RunConfig(BaseModel):
     # so a stored run (report, reopen) can recover them without the UI session.
     SPEC_KEY: ClassVar[str] = "converter_spec"
     PROFILE_KEY: ClassVar[str] = "mission_profile"
+    OVERRIDES_KEY: ClassVar[str] = "inferred_overrides"
 
-    def with_inputs(self, spec: ConverterSpec, profile: MissionProfile | None) -> RunConfig:
-        return self.model_copy(
-            update={
-                "extra": {
-                    **self.extra,
-                    self.SPEC_KEY: spec.model_dump_json(),
-                    self.PROFILE_KEY: (profile or MissionProfile()).model_dump_json(),
-                }
-            }
-        )
+    def with_inputs(
+        self,
+        spec: ConverterSpec,
+        profile: MissionProfile | None,
+        overrides: dict[str, float] | None = None,
+    ) -> RunConfig:
+        extra = {
+            **self.extra,
+            self.SPEC_KEY: spec.model_dump_json(),
+            self.PROFILE_KEY: (profile or MissionProfile()).model_dump_json(),
+        }
+        if overrides:
+            extra[self.OVERRIDES_KEY] = json.dumps(overrides, sort_keys=True)
+        return self.model_copy(update={"extra": extra})
+
+    @property
+    def inferred_overrides(self) -> dict[str, float]:
+        raw = self.extra.get(self.OVERRIDES_KEY)
+        return {k: float(v) for k, v in json.loads(raw).items()} if raw else {}
 
     @property
     def converter_spec(self) -> ConverterSpec | None:

@@ -1,0 +1,82 @@
+# Component FMEA library (PRD 3.9, FME-01). Starting point the user edits; NOT a reference.
+#
+# Per part class (and optional subtype, else `default`): failure modes with local effect,
+# system-effect template ({refdes}, {role} are filled in), default Severity and Detection (1-10),
+# and the mode fraction. Fractions MUST sum to 1 per class/subtype (checked at load).
+# `wear_out: true` modes take Occurrence from the M7 life vs the mission target; other modes from
+# lambda_mode = lambda_part (M8, FIT) * fraction. No rate and no life -> O = 10 (no data,
+# conservative, flagged), never a guessed rate.
+#
+# ALL fractions, S and D defaults are seed engineering estimates (verify): check fractions against
+# a published mode-distribution reference (e.g. FMD-2016, verify edition) before relying on them.
+id: default
+version: 1
+source: "seed FMEA library, generic engineering estimates (verify against FMD-2016 or field data)"
+occurrence:
+  # O = first row whose upper bound is not exceeded (lambda_mode in FIT); above the last -> 10
+  fit_upper: [1, 3, 10, 30, 100, 200, 400, 700, 1000]
+  # wear-out modes: O = first row whose life/target ratio is >= the bound; below the last -> 10
+  life_ratio_lower: [10, 5, 3, 2, 1.5, 1.2, 1.0, 0.7, 0.5]
+  source: "PRD 3.9 default scale (<1 FIT -> 1 ... >1000 FIT -> 10); life-ratio scale seed (verify)"
+classes:
+  capacitor:
+    aluminum_electrolytic:
+      - { id: dry_out, mode: "Electrolyte dry-out (capacitance loss, ESR rise)", local_effect: "ripple and ESR increase, self-heating", system_effect: "{role} {refdes}: output ripple / loop stability degrade, eventual loss of regulation", severity: 6, detection: 6, fraction: 0.6, wear_out: true }
+      - { id: open, mode: "Open (vent / lead)", local_effect: "no capacitance", system_effect: "{role} {refdes}: large ripple, possible instability", severity: 7, detection: 4, fraction: 0.25 }
+      - { id: short, mode: "Short", local_effect: "rail shorted through the capacitor", system_effect: "{role} {refdes}: rail collapse, fuse / upstream protection trips", severity: 9, detection: 3, fraction: 0.15 }
+    polymer:
+      - { id: esr_rise, mode: "ESR increase / capacitance loss", local_effect: "ripple increase", system_effect: "{role} {refdes}: output ripple and transient response degrade", severity: 5, detection: 6, fraction: 0.6, wear_out: true }
+      - { id: short, mode: "Short", local_effect: "rail shorted", system_effect: "{role} {refdes}: rail collapse, protection trips", severity: 9, detection: 3, fraction: 0.25 }
+      - { id: open, mode: "Open", local_effect: "no capacitance", system_effect: "{role} {refdes}: large ripple", severity: 6, detection: 4, fraction: 0.15 }
+    ceramic:
+      - { id: crack_short, mode: "Short from flex / thermal cracking", local_effect: "resistive short across the rail", system_effect: "{role} {refdes}: rail collapse or local hot spot", severity: 9, detection: 7, fraction: 0.5 }
+      - { id: cap_loss, mode: "Capacitance loss (dielectric wear-out, DC bias, ageing)", local_effect: "reduced effective capacitance", system_effect: "{role} {refdes}: higher ripple, reduced phase margin", severity: 5, detection: 6, fraction: 0.3, wear_out: true }
+      - { id: open, mode: "Open (termination crack)", local_effect: "no capacitance", system_effect: "{role} {refdes}: ripple increase", severity: 5, detection: 5, fraction: 0.2 }
+    default:
+      - { id: short, mode: "Short", local_effect: "rail shorted", system_effect: "{role} {refdes}: rail collapse, protection trips", severity: 9, detection: 4, fraction: 0.4 }
+      - { id: open, mode: "Open", local_effect: "no capacitance", system_effect: "{role} {refdes}: filtering lost", severity: 6, detection: 5, fraction: 0.4 }
+      - { id: drift, mode: "Parameter drift", local_effect: "capacitance / ESR out of tolerance", system_effect: "{role} {refdes}: degraded filtering", severity: 4, detection: 6, fraction: 0.2, wear_out: true }
+  transistor:
+    default:
+      - { id: ds_short, mode: "Drain-source short", local_effect: "switch permanently on", system_effect: "{role} {refdes}: input shorted to switch node, overvoltage / overcurrent downstream", severity: 10, detection: 3, fraction: 0.45 }
+      - { id: open, mode: "Open (bond wire / die attach)", local_effect: "switch never conducts", system_effect: "{role} {refdes}: loss of output", severity: 7, detection: 2, fraction: 0.2 }
+      - { id: rds_drift, mode: "Rds_on drift (thermal-cycling fatigue)", local_effect: "higher conduction loss and Tj", system_effect: "{role} {refdes}: efficiency loss, thermal runaway risk", severity: 6, detection: 7, fraction: 0.2, wear_out: true }
+      - { id: gate_oxide, mode: "Gate oxide damage (leakage)", local_effect: "gate leakage, partial turn-on", system_effect: "{role} {refdes}: erratic switching, shoot-through", severity: 8, detection: 6, fraction: 0.15 }
+  diode:
+    default:
+      - { id: short, mode: "Short", local_effect: "no blocking", system_effect: "{role} {refdes}: switch node or rail shorted", severity: 9, detection: 3, fraction: 0.55 }
+      - { id: open, mode: "Open", local_effect: "no conduction", system_effect: "{role} {refdes}: freewheel / rectification lost, overvoltage spike", severity: 8, detection: 3, fraction: 0.35 }
+      - { id: leakage, mode: "Reverse leakage increase", local_effect: "extra loss, heating", system_effect: "{role} {refdes}: efficiency loss, thermal stress", severity: 4, detection: 7, fraction: 0.1, wear_out: true }
+  inductor:
+    default:
+      - { id: saturation, mode: "Saturation (peak current above Isat)", local_effect: "inductance collapse, current spike", system_effect: "{role} {refdes}: switch overcurrent, current-limit trips", severity: 8, detection: 5, fraction: 0.4 }
+      - { id: open, mode: "Open winding", local_effect: "no current path", system_effect: "{role} {refdes}: loss of output", severity: 7, detection: 2, fraction: 0.35 }
+      - { id: short_turns, mode: "Shorted turns (insulation breakdown)", local_effect: "lower inductance, heating", system_effect: "{role} {refdes}: ripple increase, hot spot", severity: 6, detection: 6, fraction: 0.25, wear_out: true }
+  transformer:
+    default:
+      - { id: insulation, mode: "Primary-secondary insulation breakdown", local_effect: "isolation lost", system_effect: "{role} {refdes}: safety isolation lost", severity: 10, detection: 7, fraction: 0.3, wear_out: true }
+      - { id: open, mode: "Open winding", local_effect: "no energy transfer", system_effect: "{role} {refdes}: loss of output", severity: 7, detection: 2, fraction: 0.35 }
+      - { id: short_turns, mode: "Shorted turns", local_effect: "heating, lower inductance", system_effect: "{role} {refdes}: overcurrent, hot spot", severity: 7, detection: 6, fraction: 0.35 }
+  resistor:
+    default:
+      - { id: open, mode: "Open", local_effect: "no current path", system_effect: "{role} {refdes}: function of the resistor lost (feedback / sense / bias)", severity: 7, detection: 4, fraction: 0.6 }
+      - { id: drift, mode: "Resistance drift", local_effect: "value out of tolerance", system_effect: "{role} {refdes}: set point / sense error", severity: 5, detection: 6, fraction: 0.3, wear_out: true }
+      - { id: short, mode: "Short", local_effect: "bypassed", system_effect: "{role} {refdes}: set point or sense lost", severity: 6, detection: 4, fraction: 0.1 }
+  ic:
+    default:
+      - { id: no_output, mode: "Loss of function (no output)", local_effect: "IC stops regulating", system_effect: "{role} {refdes}: loss of output", severity: 8, detection: 2, fraction: 0.4 }
+      - { id: short, mode: "Internal short (pin to pin / to ground)", local_effect: "supply shorted", system_effect: "{role} {refdes}: rail collapse or overvoltage on the output", severity: 9, detection: 3, fraction: 0.3 }
+      - { id: parametric, mode: "Parametric drift (reference, current limit)", local_effect: "out-of-spec output", system_effect: "{role} {refdes}: output out of tolerance", severity: 6, detection: 6, fraction: 0.2 }
+      - { id: solder_joint, mode: "Solder-joint crack (thermal cycling)", local_effect: "intermittent pin", system_effect: "{role} {refdes}: intermittent operation", severity: 7, detection: 8, fraction: 0.1, wear_out: true }
+  connector:
+    default:
+      - { id: intermittent, mode: "Intermittent contact (wear, fretting)", local_effect: "contact resistance rises / opens", system_effect: "{role} {refdes}: intermittent power or signal", severity: 7, detection: 7, fraction: 0.7, wear_out: true }
+      - { id: short, mode: "Short between contacts", local_effect: "adjacent pins shorted", system_effect: "{role} {refdes}: supply short", severity: 9, detection: 4, fraction: 0.3 }
+  fuse:
+    default:
+      - { id: open, mode: "Nuisance open", local_effect: "fuse opens without fault", system_effect: "{role} {refdes}: loss of input power", severity: 7, detection: 2, fraction: 0.7, wear_out: true }
+      - { id: fail_to_open, mode: "Fails to open on overcurrent", local_effect: "protection lost", system_effect: "{role} {refdes}: fault energy not limited", severity: 9, detection: 9, fraction: 0.3 }
+  generic:
+    default:
+      - { id: open, mode: "Open", local_effect: "function lost", system_effect: "{role} {refdes}: function lost (class not in the FMEA library: review)", severity: 6, detection: 5, fraction: 0.5 }
+      - { id: short, mode: "Short", local_effect: "nodes shorted", system_effect: "{role} {refdes}: short (class not in the FMEA library: review)", severity: 8, detection: 5, fraction: 0.5 }

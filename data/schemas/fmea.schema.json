@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DfR FMEA library (PRD 3.9)",
+  "type": "object",
+  "required": ["id", "version", "source", "occurrence", "classes"],
+  "properties": {
+    "id": {"type": "string"},
+    "version": {"type": "integer", "minimum": 1},
+    "source": {"type": "string", "minLength": 1},
+    "occurrence": {
+      "type": "object",
+      "required": ["fit_upper", "life_ratio_lower", "source"],
+      "properties": {
+        "fit_upper": {"type": "array", "items": {"type": "number", "exclusiveMinimum": 0}, "minItems": 9, "maxItems": 9},
+        "life_ratio_lower": {"type": "array", "items": {"type": "number", "exclusiveMinimum": 0}, "minItems": 9, "maxItems": 9},
+        "source": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "classes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "mode", "local_effect", "system_effect", "severity", "detection", "fraction"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+              "mode": {"type": "string"},
+              "local_effect": {"type": "string"},
+              "system_effect": {"type": "string"},
+              "severity": {"type": "integer", "minimum": 1, "maximum": 10},
+              "detection": {"type": "integer", "minimum": 1, "maximum": 10},
+              "fraction": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+              "wear_out": {"type": "boolean"},
+              "source": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -36,6 +36,7 @@ class MatchState:
     candidates: list[Any]
     inferred_pins: dict[str, dict[str, str]]
     diagnostics: list[Diagnostic]
+    chosen_index: int = 0
 
 
 class Workspace:
@@ -50,7 +51,9 @@ class Workspace:
         self.spec: ConverterSpec | None = None
         self.spec_overrides: dict[str, float] = {}
         self.profile: MissionProfile = MissionProfile()
+        self.run_extra: dict[str, str] = {}  # module run settings (RunConfig.extra), e.g. M8
         self.last_outcome: Any | None = None  # dfr.app.orchestrator.RunOutcome
+        self._design_id: int | None = None  # design the spec/profile above belong to
         self.changed: Signal[str] = Signal()  # emits the name of what changed
 
     # ----------------------------------------------------------------- helpers
@@ -73,7 +76,10 @@ class Workspace:
         return sorted(patterns)
 
     # ----------------------------------------------------------------- import (T20)
-    def import_files(self, name: str, bom: Path, netlist: Path, topology: str) -> bool:
+    def import_files(
+        self, name: str, bom: Path, netlist: Path, topology: str, into_open: bool = False
+    ) -> bool:
+        """Import as a new design, or (``into_open``) as the next version of the open one."""
         from dfr.app.workflow import import_design  # noqa: PLC0415 - app layer is below ui
         from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
 
@@ -86,8 +92,10 @@ class Workspace:
                 bom_path=bom,
                 netlist_path=netlist,
                 topology=topology,
+                design_id=self.shell.design_id.value if into_open else None,
             )
         except Exception as exc:
+            self.session.rollback()
             self.shell.post(
                 Diagnostic(
                     code="UI_IMPORT_FAILED", severity=Severity.ERROR, module="ui", message=repr(exc)
@@ -109,18 +117,50 @@ class Workspace:
         return True
 
     def reload_from_db(self) -> None:
-        """When a design is opened from Home, rebuild what we can from stored rows."""
+        """When a design is opened from Home, rebuild the session from stored rows: import
+        context (so Match works), confirmed stage, the latest run's spec/profile/overrides and
+        its stored results (so Results, Refine and Re-run work without re-entering anything)."""
+        from dfr.app.restore import load_import_context, load_run_outcome  # noqa: PLC0415
         from dfr.ui.viewmodels.shell import StepStatus  # noqa: PLC0415
 
         vid = self.shell.design_version_id.value
         if vid is None:
+            self.imported, self.stage, self.last_outcome, self.match = None, None, None, None
+            self.changed.emit("reloaded")
             return
-        stages = StageRepo(self.session, self.shell.clock).for_version(vid)
+        clock = self.shell.clock
+        if self._design_id != self.shell.design_id.value:  # another design: drop its inputs
+            self._design_id = self.shell.design_id.value
+            self.spec, self.spec_overrides, self.profile = None, {}, MissionProfile()
+            self.run_extra = {}
+        if self.imported is None or self.imported.design_version_id != vid:
+            self.imported = load_import_context(self.session, self.registry, clock, vid)
+            self.pinout_requests = list(self.imported.pinout_requests) if self.imported else []
+            self.match = None
+        if self.imported is not None:
+            self.shell.set_step("parts", StepStatus.DONE)
+            self.shell.set_step("circuit", StepStatus.READY)
+        stages = StageRepo(self.session, clock).for_version(vid)
         confirmed = [s for s in stages if s.status is StageStatus.CONFIRMED]
         self.stage = confirmed[-1] if confirmed else None
         if self.stage is not None:
             self.shell.set_step("circuit", StepStatus.DONE)
             self.shell.set_step("conditions", StepStatus.READY)
+        run_id = self.shell.current_run_id.value
+        self.last_outcome = (
+            load_run_outcome(self.session, self.registry, clock, run_id)
+            if run_id is not None
+            else None
+        )
+        if self.last_outcome is not None:
+            cfg = self.last_outcome.run.config
+            self.spec = cfg.converter_spec or self.spec
+            self.profile = cfg.mission_profile or self.profile
+            self.spec_overrides = cfg.inferred_overrides
+            inputs = {cfg.SPEC_KEY, cfg.PROFILE_KEY, cfg.OVERRIDES_KEY}
+            self.run_extra = {k: v for k, v in cfg.extra.items() if k not in inputs}
+            if self.spec is not None:
+                self.shell.set_step("conditions", StepStatus.DONE)
         self.changed.emit("reloaded")
 
     def parts(self) -> list[Any]:
@@ -156,7 +196,7 @@ class Workspace:
             bom_hints=self.imported._hints,
         )
         self.match = MatchState(
-            topology, out.proposal, out.matches, out.inferred_pins, out.diagnostics
+            topology, out.proposal, out.matches, out.inferred_pins, out.diagnostics, chosen_index
         )
         self._post(out.diagnostics)
         self.changed.emit("matched")
@@ -243,7 +283,7 @@ class Workspace:
         inputs = AnalysisInputs(
             vid,
             self.spec,
-            config or RunConfig(),
+            config or RunConfig(extra=dict(self.run_extra)),
             inferred_overrides=self.spec_overrides or None,
             profile=self.profile,
         )
@@ -289,6 +329,15 @@ class Workspace:
             )
             return None
         return self.run_tier1(config, parent_run_id=parent, tier_level=Tier.T2)
+
+    def set_run_extra(self, key: str, value: str | None) -> None:
+        """A module run setting for the next run (stale results until re-run)."""
+        if value:
+            self.run_extra[key] = value
+        else:
+            self.run_extra.pop(key, None)
+        self.shell.mark_downstream_stale("conditions")
+        self.changed.emit("run_extra")
 
     def note_t2_input(self) -> None:
         """A prompt was answered or Tier 2 rows imported: results are stale until re-run."""

@@ -114,6 +114,10 @@ Use these exact names. Unknown names are stored and shown but no rule or model r
 | ic (regulator) | `rds_on_hs`, `rds_on_ls` | ohm | IC loss option 1 |
 | ic (regulator) | `p_sw` | W | IC switching loss (option 1 add-on) |
 | ic (regulator) | `eta` | "" | IC loss option 2 (efficiency at the operating point, 0-1) |
+| ic (flyback controller) | `eta` | "" | flyback Pin = Pout/eta (else data-file default 0.85, stated) |
+| transformer | `turns_ratio` | "" | flyback n = Np/Ns (required; otherwise prompted) |
+| transformer | `l_primary` | H | flyback primary / magnetizing inductance (required; otherwise prompted) |
+| diode (flyback clamp) | `v_clamp` | V | flyback leakage spike above Vin + Vreflected (else 30 % of Vreflected, stated) |
 
 Pin functions: two-terminal passives need none. FETs: `gate`, `drain`, `source`. Diodes:
 `anode`, `cathode`. Regulator ICs: `vin`, `sw`, `boot`, `vout_sense`, `fb`, `gnd`, `en`,

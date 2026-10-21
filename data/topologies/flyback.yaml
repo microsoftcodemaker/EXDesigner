@@ -1,0 +1,8 @@
+# Flyback template defaults (PRD 3.2 "Flyback", T27). Used ONLY when the design gives no value;
+# every use is stated in the run diagnostics and the stress-row note. All values verify.
+id: flyback
+version: 1
+source: "PRD section 3.2 Flyback defaults (eta 0.85, Vspike 30 % of Vreflected, boundary band 10 %) (verify)"
+eta: 0.85                 # converter efficiency when the IC/controller has no `eta` rating (verify per design)
+v_spike_fraction: 0.30    # leakage spike as a fraction of Vreflected when no clamp value is known (verify)
+boundary_band: 0.10       # flag when within 10 % of the CCM/DCM boundary (verify)

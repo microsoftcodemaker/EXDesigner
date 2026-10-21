@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from dfr.core.contracts import PinoutRequest, RoleEdit
+from dfr.core.db.repos import DesignRepo
 from dfr.core.extension import ScreenSpec
 from dfr.ui.kit import heading
 from dfr.ui.tokens import PALETTES
@@ -118,12 +119,9 @@ class CircuitScreen(QWidget):
         self.ws.run_match(self.topology.currentText())
 
     def _candidate_changed(self, index: int) -> None:
-        if index >= 0 and self.ws.match is not None and index < len(self.ws.match.candidates):
-            chosen = self.ws.match.candidates[index]
-            if self.ws.match.proposal is None or self.ws.match.proposal.rails[
-                0
-            ].net_name != chosen.rails.get(self.ws.match.proposal.rails[0].rail):
-                self.ws.run_match(self.topology.currentText(), chosen_index=index)
+        m = self.ws.match
+        if m is not None and 0 <= index < len(m.candidates) and index != m.chosen_index:
+            self.ws.run_match(m.topology, chosen_index=index)
 
     def do_confirm(self) -> None:
         stage = self.ws.confirm(list(self._edits.values()))
@@ -141,17 +139,47 @@ class CircuitScreen(QWidget):
             self.topology.clear()
             self.topology.addItems(self.ws.topologies())
             if self.ws.imported is not None and self.ws.imported.design_id is not None:
-                from dfr.core.db.repos import DesignRepo  # noqa: PLC0415
-
                 d = DesignRepo(self.vm.session, self.vm.clock).get(self.ws.imported.design_id)
                 if d is not None and d.topology_template:
                     self.topology.setCurrentText(d.topology_template)
             self.topology.blockSignals(False)
+            self._show_stored_stage()
         self._render_pinouts()
         if what == "matched":
             self._render_match()
         if what == "confirmed":
             self.confirm_btn.setEnabled(False)
+
+    def _show_stored_stage(self) -> None:
+        """After reopen: list the confirmed stage's rails and roles; Match again to edit."""
+        self.rails.clear()
+        self.roles.clear()
+        self.evidence.clear()
+        self.candidate.clear()
+        self.confirm_btn.setEnabled(False)
+        stage = self.ws.stage
+        if stage is None:
+            self.status.setText(
+                "Pick the topology, then Match."
+                if self.ws.imported is not None
+                else "Import a design, pick the topology, then Match."
+            )
+            return
+        self.status.setText(
+            f"Confirmed stage {stage.pattern_id} (confidence {stage.match_confidence:.2f}). "
+            "Match again to review or edit the roles; confirming creates a new stage."
+        )
+        for r in stage.rails:
+            self.rails.addTopLevelItem(QTreeWidgetItem([r.rail, r.net_name]))
+        for a in sorted(stage.assignments, key=lambda a: (a.role == "other", a.refdes)):
+            self.roles.addTopLevelItem(
+                QTreeWidgetItem(
+                    [a.refdes, a.role, a.rail or "", f"{a.confidence:.2f}", a.provenance.value]
+                )
+            )
+        for tree, n in ((self.rails, 2), (self.roles, 5)):
+            for i in range(n):
+                tree.resizeColumnToContents(i)
 
     def _render_pinouts(self) -> None:
         self.pinouts.clear()
@@ -175,6 +203,7 @@ class CircuitScreen(QWidget):
                 self.candidate.addItem(
                     f"#{i + 1}  sw={c.rails.get('sw', '?')}  conf {c.confidence:.2f}"
                 )
+            self.candidate.setCurrentIndex(m.chosen_index if m.candidates else -1)
         self.candidate.blockSignals(False)
         if m is None or m.proposal is None:
             self.status.setText(
@@ -204,9 +233,7 @@ class CircuitScreen(QWidget):
             elif low or a.confidence < 0.7:
                 item.setForeground(ROLE_COL, QColor(palette.status.warn))
             self.roles.addTopLevelItem(item)
-        best = m.candidates[
-            self.candidate.currentIndex() if self.candidate.currentIndex() >= 0 else 0
-        ]
+        best = m.candidates[min(m.chosen_index, len(m.candidates) - 1)]
         for e in best.evidence:
             item = QTreeWidgetItem([e.constraint, e.evidence])
             item.setForeground(

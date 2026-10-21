@@ -39,10 +39,13 @@ class HomeScreen(QWidget):
         new.clicked.connect(self.new_design)
         self.open_btn = QPushButton("Open")
         self.open_btn.clicked.connect(self.open_selected)
+        self.rename_btn = QPushButton("Rename…")
+        self.rename_btn.clicked.connect(self.rename_selected)
         refresh = QPushButton("Refresh")
         refresh.clicked.connect(self.reload)
         bar.addWidget(new)
         bar.addWidget(self.open_btn)
+        bar.addWidget(self.rename_btn)
         bar.addWidget(refresh)
         bar.addStretch(1)
         layout.addLayout(bar)
@@ -53,6 +56,9 @@ class HomeScreen(QWidget):
         self.tree.itemSelectionChanged.connect(self._selected)
         self.tree.itemDoubleClicked.connect(lambda *_: self.open_selected())
         layout.addWidget(self.tree, 1)
+        vm.workspace.changed.connect(
+            lambda what: self.reload() if what in ("imported", "run") else None
+        )
         self.reload()
 
     def reload(self) -> None:
@@ -105,6 +111,18 @@ class HomeScreen(QWidget):
         if did is not None:
             self.vm.open_design(did)
 
+    def rename_selected(self) -> None:
+        did = self._current_id()
+        repo = DesignRepo(self.vm.session, self.vm.clock)
+        d = repo.get(did) if did is not None else None
+        if d is None:
+            return
+        name, ok = QInputDialog.getText(self, "Rename design", "Design name:", text=d.name)
+        if ok and name.strip():
+            repo.rename(d.id, name.strip())
+            self.vm.commit()
+            self.reload()
+
     def new_design(self) -> None:
         name, ok = QInputDialog.getText(self, "New design", "Design name:")
         if not ok or not name.strip():
@@ -114,6 +132,7 @@ class HomeScreen(QWidget):
         self.vm.commit()
         self.reload()
         self.vm.open_design(d.id)
+        self.vm.navigate.emit("import_design")
 
 
 def build(vm: ShellViewModel) -> QWidget:

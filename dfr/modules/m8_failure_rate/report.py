@@ -16,6 +16,7 @@ SPEC = ReportSectionSpec(
     id="failure_rate", title="Failure rate and MTBF", order=37, requires=(MODULE_ID,)
 )
 HOURS_PER_YEAR = 8766.0
+COMPARISON_HEADER = ["Aspect", "MIL-HDBK-217F", "Telcordia SR-332", "Physics-of-failure"]
 
 COMPARISON = [
     ["Failure-rate shape", "Constant", "Constant (with data updates)", "Wear-out (increasing)"],
@@ -62,7 +63,7 @@ def render_failure_rate(b: Any) -> str:
     html.append(
         "<h3>Model comparison (PRD 3.8)</h3>"
         + table(
-            ["Aspect", "MIL-HDBK-217F", "Telcordia SR-332", "Physics-of-failure"],
+            COMPARISON_HEADER,
             [[escape(c) for c in row] for row in COMPARISON],
         )
     )
@@ -110,6 +111,11 @@ def _one(b: Any, r: FailureRateResult) -> str:
         )
     assumptions = "<ul>" + "".join(f"<li>{escape(a)}</li>" for a in r.assumptions) + "</ul>"
     return head + figures + body + excl + assumptions
+
+
+def comparison() -> tuple[list[str], list[list[str]]]:
+    """PRD 3.8 model-comparison table for the in-app panel (MTB-05)."""
+    return list(COMPARISON_HEADER), [list(r) for r in COMPARISON]
 
 
 def sections() -> list[tuple[ReportSectionSpec, Any]]:

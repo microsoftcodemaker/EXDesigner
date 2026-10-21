@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from dfr.core.contracts import DeratingStatus
-from dfr.core.db.repos import PartRepo
+from dfr.core.db.repos import PartRepo, StressRepo
 from dfr.core.extension import ScreenSpec
 from dfr.ui.kit import MarginBar, StatusChip, TierBadge, heading
 from dfr.ui.tokens import PALETTES, status_color
@@ -96,7 +96,7 @@ class ResultsScreen(QWidget):
         split.setSizes([500, 150, 150])
         layout.addWidget(split, 1)
         self.ws.changed.connect(
-            lambda what: self.refresh() if what in ("run", "reloaded") else None
+            lambda what: self.refresh() if what in ("run", "reloaded", "t2_input") else None
         )
         self.refresh()
 
@@ -138,7 +138,7 @@ class ResultsScreen(QWidget):
             f"Run #{out.run.id} {out.run.status.value}: {counts[DeratingStatus.FAIL]} FAIL, "
             f"{counts[DeratingStatus.WARN]} WARN, {counts[DeratingStatus.UNKNOWN]} UNKNOWN, "
             f"{counts[DeratingStatus.PASS]} PASS; {len(thermal)} thermal rows; "
-            f"{len(out.context.get_or('stress', []))} stress values (T1). "
+            f"{len(out.context.get_or('stress', []))} stress values. "
             f"Pipeline: {', '.join(out.pipeline.ids)}"
             + _failure_rate_line(out.context.get_or("failure_rate", []))
         )
@@ -181,7 +181,10 @@ class ResultsScreen(QWidget):
             self.table.setItemWidget(item, 9, bar)
         for i in range(9):
             self.table.resizeColumnToContents(i)
-        for p in out.context.get_or("prompts", []):
+        self.table.setColumnWidth(9, 120)
+        vid = self.vm.design_version_id.value
+        open_prompts = StressRepo(self.vm.session, self.vm.clock).open_prompts(vid) if vid else []
+        for p in open_prompts:
             part = parts.get(p.part_id)
             self.prompts.addTopLevelItem(
                 QTreeWidgetItem([part.refdes if part else "-", p.param, p.reason, p.how_to_obtain])

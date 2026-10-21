@@ -99,6 +99,13 @@ class FmeaRow(BaseModel):
     detection: int = Field(ge=1, le=10)
     source_flags: dict[str, str] = Field(default_factory=dict)  # S/O/D -> "seed" | "user"
     mitigation_note: str | None = None
+    # Additive v1 (M9): db id, the library mode id (override key with part_id), how O was
+    # derived ("fit" | "life" | "no_data" | "user") and the inputs behind it.
+    id: int | None = None
+    mode_id: str = ""
+    occurrence_basis: str = ""
+    lambda_fit: float | None = None
+    life_ratio: float | None = None
 
     @property
     def rpn(self) -> int:

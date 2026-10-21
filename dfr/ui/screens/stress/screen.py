@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from dfr.core.contracts import Part, Source, Stat, StressValue, ValuePrompt
+from dfr.core.contracts import Diagnostic, Part, Severity, Source, Stat, StressValue, ValuePrompt
 from dfr.core.db.repos import PartRepo, StressRepo
 from dfr.core.db.repos.stress import resolve_effective_stress
 from dfr.core.extension import ScreenSpec
@@ -29,7 +29,7 @@ from dfr.ui.tokens import PALETTES
 from dfr.ui.viewmodels.shell import Selection, ShellViewModel
 
 SCREEN = ScreenSpec(
-    id="stress", title="Stress Table", step="analyze", order=45, requires=("m2_conditions",)
+    id="stress", title="Stress Table", step="analyze", order=55, requires=("m2_conditions",)
 )
 COLS = [
     "Part",
@@ -213,6 +213,14 @@ class StressScreen(QWidget):
     def manual_entry(self) -> None:
         parts = self._parts()
         if not parts or not self.vm.registry.has_service("manual_stress"):
+            self.vm.post(
+                Diagnostic(
+                    code="UI_NO_DESIGN",
+                    severity=Severity.INFO,
+                    module="ui",
+                    message="open or import a design first",
+                )
+            )
             return
         dlg = ManualDialog(self, sorted(parts.values(), key=lambda p: p.refdes))
         if dlg.exec() != QDialog.DialogCode.Accepted or dlg.entry is None:
@@ -238,8 +246,17 @@ class StressScreen(QWidget):
     def toggle_pin(self) -> None:
         """Rows are immutable: pinning stores a new manual copy with the flag flipped."""
         v = self._current_value()
-        if v is None or v.source is not Source.MANUAL:
-            return  # only manual rows can be pinned (PRD 3.2 mode b)
+        if v is None or v.source is not Source.MANUAL:  # only manual rows pin (PRD 3.2 mode b)
+            self.vm.post(
+                Diagnostic(
+                    code="UI_PIN_MANUAL_ONLY",
+                    severity=Severity.INFO,
+                    module="ui",
+                    message="select a manual row to pin; to override a computed value use "
+                    "Manual entry… with Pin = yes",
+                )
+            )
+            return
         copy = v.model_copy(
             update={"id": None, "pinned": not v.pinned, "timestamp": self.vm.clock.now()}
         )

@@ -91,6 +91,7 @@ def compute_template_stress(
     }
     params.update({k: v.value for k, v in inferred.values.items()})
     params.update(_ic_params(parts, roles))
+    params.update(_template_part_inputs(template, parts, roles, params))
     params.update(part_params or {})
 
     out = _template_output(template, params)
@@ -119,7 +120,7 @@ def compute_template_stress(
                 assert part.id is not None
                 stress.append(_bind(s, part.id, share, tool, template.version, now))
 
-    prompts = [_prompt_for(name, roles, by_ref) for name in dict.fromkeys(out.needs)]
+    prompts = [_prompt_for(name, roles, by_ref, template) for name in dict.fromkeys(out.needs)]
     return TemplateStress(stress, [p for p in prompts if p], inferred, params, list(sink.items))
 
 
@@ -244,12 +245,36 @@ def _bind(  # noqa: PLR0917
     )
 
 
-def _prompt_for(name: str, roles: RoleMap, by_ref: Mapping[str, Part]) -> ValuePrompt | None:
-    text = _PROMPT_TEXT.get(name)
-    if text is None:
+def _template_part_inputs(
+    template: TopologyTemplate, parts: list[Part], roles: RoleMap, params: Mapping[str, float]
+) -> dict[str, float]:
+    """Template-declared ``part_inputs`` (param -> (role, rating)) read from part ratings, so a
+    topology plugin can use e.g. a transformer turns ratio without M2 knowing the topology."""
+    by_ref = {p.refdes: p for p in parts}
+    out: dict[str, float] = {}
+    for param, (role, rating) in getattr(template, "part_inputs", {}).items():
+        if param in params:
+            continue
+        for r in roles.parts_with_role(role):
+            found = by_ref[r].ratings.get(rating) if r in by_ref else None
+            if found is not None:
+                out[param] = found.value
+                break
+    return out
+
+
+def _prompt_for(
+    name: str, roles: RoleMap, by_ref: Mapping[str, Part], template: TopologyTemplate | None = None
+) -> ValuePrompt | None:
+    """Prompt for a value the template needs; the template's own ``prompt_specs`` win."""
+    own = getattr(template, "prompt_specs", {}).get(name)
+    if own is not None:
+        role, param, stat, reason, how = own
+    elif name in _PROMPT_TEXT:
+        param, stat, reason, how = _PROMPT_TEXT[name]
+        role = {"p_ic": "ic", "p_sw": "ic", "dcr": "inductor", "vd": "catch_diode"}[name]
+    else:
         return None
-    param, stat, reason, how = text
-    role = {"p_ic": "ic", "p_sw": "ic", "dcr": "inductor", "vd": "catch_diode"}[name]
     refs = roles.parts_with_role(role)
     part = by_ref.get(refs[0]) if refs else None
     return ValuePrompt(

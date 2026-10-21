@@ -25,7 +25,7 @@ weights:
 blind_spots:
   - id: sw_vds_ringing
     topologies: [buck, buck_integrated, boost, buck_boost, flyback]
-    roles: [high_side_switch, low_side_switch, ic]
+    roles: [high_side_switch, low_side_switch, primary_switch, ic]
     param: v_peak
     stat: peak
     scenario: vin_max
@@ -55,7 +55,7 @@ blind_spots:
     source: "PRD 3.3 F4 blind-spot table (verify)"
   - id: output_diode_piv
     topologies: [boost, flyback]
-    roles: [catch_diode]
+    roles: [catch_diode, output_diode]
     param: v_peak
     stat: peak
     scenario: vin_max

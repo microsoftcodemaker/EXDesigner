@@ -177,6 +177,10 @@ class RatingDialog(QDialog):
             "qg",
             "t_knee",
             "t_max",
+            "vf",
+            "turns_ratio",
+            "l_primary",
+            "v_clamp",
         ]
         self.name.addItems(sorted(set(known) | set(part.ratings.ratings)))
         self.value = QLineEdit()

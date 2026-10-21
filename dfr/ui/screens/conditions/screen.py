@@ -118,8 +118,34 @@ class ConditionsScreen(QWidget):
         layout.addLayout(bar)
         layout.addStretch(1)
 
-        self.ws.changed.connect(lambda _: self.refresh_inferred())
+        self.ws.changed.connect(self._ws_changed)
+        self._ws_changed("reloaded")
+
+    def _ws_changed(self, what: str) -> None:
+        if what == "reloaded":
+            self.load_inputs()
         self.refresh_inferred()
+
+    def load_inputs(self) -> None:
+        """Show the spec / overrides / profile the workspace holds (restored on reopen)."""
+        spec, prof = self.ws.spec, self.ws.profile
+        if spec is not None:
+            for w, v in (
+                (self.vin_min, spec.vin_min),
+                (self.vin_max, spec.vin_max),
+                (self.vout, spec.vout),
+                (self.iout, spec.iout_max),
+                (self.fsw, spec.fsw / 1e3),
+                (self.ta, spec.t_ambient),
+            ):
+                w.setValue(v)
+        for name, edit in self.overrides.items():
+            ov = self.ws.spec_overrides.get(name)
+            edit.setText(f"{ov:g}" if ov is not None else "")
+        self.target_years.setValue(prof.target_life_years)
+        self.hours_per_year.setValue(prof.operating_hours_per_year)
+        self.cycles_per_year.setValue(prof.on_off_cycles_per_year)
+        self.mating_per_year.setValue(prof.mating_cycles_per_year)
 
     def refresh_inferred(self) -> None:
         stage = self.ws.stage

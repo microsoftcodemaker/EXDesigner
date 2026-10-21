@@ -41,7 +41,9 @@ def import_design(
     netlist_path: Path,
     topology: str,
     fs: FileSystem | None = None,
+    design_id: int | None = None,
 ) -> ImportOutcome:
+    """Import into a new design, or as the next version of ``design_id`` when given."""
     fs = fs or LocalFileSystem()
     svc = registry.service
     imported, bom = svc("import_bom")(
@@ -52,7 +54,12 @@ def import_design(
     pruned = svc("prune_dnp")(net.graph, joined.parts)
     pins = svc("resolve_pin_functions")(pruned, joined.parts, session=session, clock=clock)
 
-    design = DesignRepo(session, clock).create(name, topology_template=topology)
+    designs = DesignRepo(session, clock)
+    design = designs.get(design_id) if design_id is not None else None
+    if design is None:
+        design = designs.create(name, topology_template=topology)
+    else:
+        design.topology_template = topology
     stored = svc("persist_design")(
         session,
         clock,

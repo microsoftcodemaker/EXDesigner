@@ -45,10 +45,12 @@ Imports go down only (import-linter contract "Layers"). Modules are mutually ind
 | `lifetime` | M7 | `list[LifetimeResult]` |
 | `failure_rate` | M8 | `list[FailureRateResult]` (one per table/method, never summed across methods) |
 | `refinement` | M3 | `list[RefinementItem]` |
+| `fmea` | M9 | `list[FmeaRow]` sorted by RPN |
 | `prompts`, `inferred_values`, `template_params` | M2 | `list[ValuePrompt]`, `InferredValues`, `dict` |
 | `ruleset_hash` | M5 | `str` |
 
 | `triage_context` | M3 (`run_context` service) | `dict` with `waivers`, `open_prompts` |
+| `fmea_context` | M9 (`run_context` service) | `dict` with `overrides` (user S/O/D per part + mode) |
 | `mission_profile` | app (`AnalysisInputs.profile`), echoed by M7 | `MissionProfile` |
 
 Seeded by the app layer (`dfr.app.analysis.run_tier1`) before the run: `stage`, `role_map`,
@@ -73,7 +75,10 @@ every topology plugin's `topology.patterns`). Current names: `import_bom`, `impo
 `load_triage_config`, `load_refinement_items`, `load_triage_waivers`, `waive_refinement`,
 `unwaive_refinement`, `run_context` (M3); `estimate_lifetimes`, `load_lifetime_constants`,
 `load_lifetime_results` (M7); `compute_failure_rates`, `load_failure_rate_tables`,
-`load_failure_rate_table_file`, `load_failure_rate_results` (M8); `build_report_html`,
+`load_failure_rate_table_file`, `load_failure_rate_results`, `failure_rate.run_options`,
+`failure_rate.comparison` (M8); `load_fmea_library`, `load_fmea_rows`,
+`fmea_rows_with_overrides`, `set_fmea_override`, `clear_fmea_override`, `fmea_csv`,
+`run_context` (M9); `build_report_html`,
 `write_report_html`, `load_report_bundle` (M11); `topology.patterns`, `topology.templates`,
 `topology.inference` (each topology folder). A module's own result rows are persisted by its
 `persist` hook and read back only through its services, so M11 never imports M5/M6.
@@ -81,10 +86,14 @@ every topology plugin's `topology.patterns`). Current names: `import_bom`, `impo
 Report fan-out: a module contributes `report.bundle_extras(session, run_id) -> dict` (merged
 into `RunBundle.extras` by M11's `load_bundle`) and `report.sections() -> [(ReportSectionSpec,
 render)]`; `render(bundle)` formats numbers with `dfr.api.num` / `table` (shared helpers in
-`dfr.core.report`, so no module imports M11). M3, M7 and M8 use this.
+`dfr.core.report`, so no module imports M11). M3, M7, M8 and M9 use this.
 
-The spec and mission profile a run was made with are stored in the run row
-(`RunConfig.with_inputs`, read back via `RunConfig.converter_spec` / `.mission_profile`).
+The spec, mission profile and L/Cout overrides a run was made with are stored in the run row
+(`RunConfig.with_inputs`, read back via `RunConfig.converter_spec` / `.mission_profile` /
+`.inferred_overrides`); module run settings (e.g. M8 `fr_environment`) sit in the same `extra`.
+`dfr.app.restore` rebuilds a session from stored rows when a design is reopened:
+`load_import_context` (graph from net/pin tables) and `load_run_outcome` (every module's
+`load_*` results service, listed in `RESULT_LOADERS`).
 
 ## Database
 
@@ -119,8 +128,14 @@ implement `run(ctx) -> StepResult`, write `migrations/0001_<id>.py` with
 `branch_labels=("<id>",)` if you need tables, add `tests/<id>/`. Run the full check.
 
 **Add a topology** — create `dfr/topologies/<id>/` with `pattern.py` (`TopologyPattern`),
-`template.py` (`TopologyTemplate`, `pattern_id` = the pattern), `data/` and `module.py`
-registering both. Add golden role-map and hand-calculated stress tests.
+`template.py` (`TopologyTemplate`, `pattern_id` = the pattern) and `module.py` registering both
+(`topology.patterns` / `topology.templates` services); defaults go in `data/topologies/<id>.yaml`.
+A template may declare `part_inputs = {param: (role, rating)}` (M2 reads those ratings into the
+template params) and `prompt_specs = {need: (role, param, stat, reason, how)}` (M2 prompts for
+anything in `needs` with that text), so M2 never learns the topology. Add hand-calculated
+equation tests (3+ cases, 0.1 %), a synthetic Protel netlist pattern test
+(`tests.conftest.protel_netlist`) and F4 rows in `data/triage/default.yaml` for the family.
+Shipped: `buck` (+ `buck_integrated`), `boost` (+ `buck_boost`, inverting), `flyback`.
 
 **Add a screen** — create `dfr/ui/screens/<id>/screen.py` exposing `SCREEN = ScreenSpec(id, title,
 step, order, requires=(module ids,))` and `build(vm) -> QWidget`. The Project panel and document

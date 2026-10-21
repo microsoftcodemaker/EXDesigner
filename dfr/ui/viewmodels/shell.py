@@ -96,6 +96,7 @@ class ShellViewModel:
         self.messages_changed: Signal[list[Diagnostic]] = Signal()
         self.status_text: Property[str] = Property("Ready")
         self.tier_mix: Property[TierMix] = Property(TierMix())
+        self.navigate: Signal[str] = Signal()  # screen id a view asks the shell to open
         self.workspace = Workspace(self)
 
         for d in self.registry.diagnostics:

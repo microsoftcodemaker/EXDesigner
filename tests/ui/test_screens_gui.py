@@ -97,7 +97,9 @@ def test_full_tier1_flow_through_screens(window) -> None:
     res.do_run()
     assert vm.workspace.last_outcome is not None and vm.workspace.last_outcome.ok
     assert "0 FAIL, 2 WARN" in res.summary.text()
-    assert res.table.topLevelItemCount() == 9 and res.prompts.topLevelItemCount() == 1
+    # every open prompt: M2's U3 p_loss + one per M3 blind spot (4 for Design C) when present
+    n_prompts = 1 + 4 * ("m3_triage" in vm.present_modules)
+    assert res.table.topLevelItemCount() == 9 and res.prompts.topLevelItemCount() == n_prompts
     if "m8_failure_rate" in vm.present_modules:  # shipped tables are empty: n/a, never a number
         assert "mil_hdbk_217f n/a" in res.summary.text()
     if "m7_lifetime" in vm.present_modules:  # Design C has no vendor life data: 19 x n/a

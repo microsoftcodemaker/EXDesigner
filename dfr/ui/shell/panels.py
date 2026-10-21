@@ -51,6 +51,7 @@ class ProjectPanel(QDockWidget):
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
         self.tree.setIndentation(14)
+        self.tree.setMinimumWidth(180)
         super().__init__("Project")
         self.setObjectName("dock_project")
         self.setWidget(self.tree)

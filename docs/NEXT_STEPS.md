@@ -1,8 +1,8 @@
 # Hand-off: goal, state, architecture, decisions, open issues, next step
 
-Last updated after the T32–T34 session (M8 failure rate + surfacing M3/M7 in the report and
-Results screen), which followed T29–T31 (M7 lifetime) and T35–T37 (M3 triage, Tier 2 CSV,
-Refine + Compare Runs). Read `AGENTS.md` first (rules), then this file. Update this file at
+Last updated after the "UI repair + T26–T28 + T38" session: reopen/restore, a UI audit with
+fixes, Failure Rate (MTB-05) and FMEA screens, boost / buck-boost / flyback topologies, M9 FMEA.
+Earlier: T32–T34 (M8), T29–T31 (M7), T35–T37 (M3, Tier 2 CSV, Refine + Compare Runs). Read `AGENTS.md` first (rules), then this file. Update this file at
 the end of every session.
 
 ---
@@ -15,10 +15,10 @@ converter topology, compute Tier 1 stress, derate, solve thermal, triage, lifeti
 rate, FMEA, report. Built so modules/topologies/screens/report sections can be added or removed
 by adding or deleting a folder, with no edits elsewhere.
 
-**State.** PRD MVP tasks T01–T25 complete, the owner-requested part catalog, v1 slices
-T35–T37 (triage), T29–T31 (lifetime) and T32–T34 (failure rate). Remaining v1: other
-topologies (T26–T28), M9 FMEA/validation (T38–T40), MTB-05 in-app comparison screen; v2
-(T41–T44) not started.
+**State.** PRD MVP tasks T01–T25 complete, the part catalog, v1 slices T35–T37, T29–T31,
+T32–T34, **T26/T27 (boost, inverting buck-boost, flyback)**, **T38 (M9 FMEA)** and the MTB-05
+in-app panel. Remaining v1: T28 (H-bridge + Design B fixtures), T39 (refinement report section /
+what-if), T40 (validation harness); v2 (T41–T44) not started.
 
 | Area | Status |
 | --- | --- |
@@ -34,11 +34,15 @@ topologies (T26–T28), M9 FMEA/validation (T38–T40), MTB-05 in-app comparison
 | M11 HTML report (100 % badged numbers), PDF via QtWebEngine; **module sections via `report.bundle_extras` + `report.sections`** | done |
 | PySide6 shell + 11 screens (…, **Refine**, **Compare Runs**) + PRD 2.6 workflow states | done |
 | Packaging: PyInstaller spec, launcher, Inno script, build script | done (built once; ISCC not installed) |
-| Other topologies, M9 FMEA, M10 Monte Carlo | not started |
+| **Topologies `boost` (+ `buck_boost`) and `flyback`** (patterns, templates, hand-calc tests, synthetic netlists) | done; H-bridge (T28) not started |
+| **M9 FMEA** (library + schema, generator, overrides, CSV, screen, report section) | done; XLSX export and AIAG-VDA AP (FME-04, v2) not done |
+| **Reopen restore** (`dfr/app/restore.py`), Failure Rate screen, FMEA screen, UI audit fixes | done |
+| M10 Monte Carlo | not started |
 
-Quality gates at head: ~320 tests, ~96 % coverage (gate 85 %), mypy strict clean (173 files),
-import-linter 3/3, UI token lint clean, subtractive matrix (8 optional folders incl.
-`m8_failure_rate`) — see the commit message for the last local result.
+Quality gates at head: ~430 tests, 95.8 % coverage (gate 85 %), mypy strict clean (195 files),
+import-linter 3/3, UI token lint clean, subtractive matrix green for all 10 optional folders
+(`_example, m11_report, m3_triage, m6_thermal, m7_lifetime, m8_failure_rate, m9_fmea, boost,
+buck, flyback`; ~25 min on this machine).
 
 Design C (the only real board; fixtures in `tests/fixtures/design_c/`) operating point from the
 owner: Vin 7–22 V, Vout 3.3 V, Iout 3.25 A, fsw 400 kHz, Ta 20 °C. Expected Tier 1 result:
@@ -55,6 +59,51 @@ excluded with "no table entry"), `pof` "nothing to roll up" (no M7 estimates). T
 summary line and the report's "Failure rate and MTBF" section say exactly that; no number is
 invented. A filled table (format in `docs/failure_rate_tables.md`) turns the 217F line into
 λ_sys/MTBF immediately.
+
+### This session (read first)
+
+- **Reopen works**: `Workspace.reload_from_db` rebuilds the import context
+  (`dfr.app.restore.load_import_context`: graph from net/pin rows, DNP-pruned, pinout requests
+  recomputed; BOM topology hints are not stored so hint-conflict diagnostics are absent after
+  reopen), the confirmed stage, the latest run as a `RunOutcome` (`load_run_outcome`, loaders in
+  `RESULT_LOADERS`) and the spec / profile / L-Cout overrides / module run settings from the run
+  row. A different design resets those inputs (`Workspace._design_id`). Test:
+  `tests/ui/test_reopen_gui.py` (file DB, new window, Match / Results / Refine / Re-run).
+- **Import into the open design**: Home "New design" opens the import screen, whose checkbox
+  (default on when a design is open) imports as the next *version* of it
+  (`import_design(design_id=...)`). Previously every import created a second design.
+- **UI audit** (offscreen screenshots with `QT_QPA_FONTDIR=C:/Windows/Fonts`): TierBadge /
+  StatusChip / SourceTag style sheets were invalid (`}}` in a non-f-string: chips rendered
+  unstyled) — fixed; MarginBar drew full bands with no data (UNKNOWN rows) — now a dashed empty
+  box; Project dock ~50 px wide on first run — min width + `resizeDocks`; Help → About did
+  nothing — dialog with modules/screens; File menu had only Exit — Designs / Import / Report;
+  toolbar has the main steps; Analyze step opened the Stress Table (no Run button) — Results now
+  first (`stress` order 55); Results "Values needed" lists every open prompt (M2 + M3);
+  Conditions form shows the restored spec/profile/overrides; Circuit Review shows the stored
+  stage after reopen and the candidate picker keeps the chosen candidate (was reset to #1 and
+  showed candidate 1's evidence); Report Export HTML after picking another run exported the
+  old run's HTML — cleared on pick; PDF status waits for `pdfPrintingFinished`; Stress pin on a
+  non-manual row posts `UI_PIN_MANUAL_ONLY`; Home has Rename; Refine reasons column capped.
+  GUI tests now write QSettings to a temp INI (autouse fixture in `tests/conftest.py`).
+- **Failure Rate screen** (`dfr/ui/screens/reliability/`, requires M8): per-method table (λ,
+  MTBF only for constant-rate, MTTF/B10 for PoF), per-part rates + exclusion reasons, PRD 3.8
+  comparison table (M8 service `failure_rate.comparison`), environment/quality pickers fed by
+  `failure_rate.run_options` (keys of the tables' lookup factors + defaults) and stored in
+  `Workspace.run_extra` → `RunConfig.extra` for the next run.
+- **Topologies** `dfr/topologies/boost/` (patterns/templates `boost`, `buck_boost`; one
+  equation core `equations.py`) and `dfr/topologies/flyback/` (CCM/DCM auto-select, leakage
+  spike, boundary flag; defaults `data/topologies/flyback.yaml`: eta 0.85, Vspike 30 % of Vr,
+  band 10 %, all verify, every use stated). M2 gained two generic template hooks:
+  `part_inputs` (param ← role rating, e.g. `n` ← transformer `turns_ratio`) and
+  `prompt_specs` (prompt text for template `needs`). New ratings in `docs/catalog_format.md`.
+  F4 rows now include `primary_switch` / `output_diode`.
+- **M9 FMEA** `dfr/modules/m9_fmea/`: `library.py` (`data/fmea/fmea_library.yaml`, schema
+  `fmea.schema.json`, fractions must sum to 1), `engine.py` (`generate`, O from M8 constant-rate
+  λ × fraction or M7 life/target for wear-out modes; neither → O = 10 "no_data",
+  conservative), `module.py` (tables `m9_fmea_row`, `m9_fmea_override`; overrides per version
+  + part + mode survive re-runs), `report.py` (section `fmea`, order 40). Screen
+  `dfr/ui/screens/fmea/`. `FmeaRow` gained additive `id, mode_id, occurrence_basis, lambda_fit,
+  life_ratio`. Design C: every O = 10 (no rates, no lives) — honest.
 
 ## 2. First 10 minutes of the next session
 
@@ -325,7 +374,7 @@ boundary (WARN while `stress <= rating`); avoid Qt name clashes (`render`, `resu
 
 None fail tests; behaviours to fix or polish.
 
-1. **Reopening a design from Home does not restore the import context.** `Workspace.imported`
+1. ~~**Reopening a design from Home does not restore the import context.**~~ Fixed this session. `Workspace.imported`
    is only set by `import_files`; `reload_from_db` restores the confirmed stage but not
    `_graph/_parts/_hints`. Symptom: on Circuit Review, Match posts `UI_NO_IMPORT`. Fix: rebuild
    from `NetlistRepo`/`PartRepo` rows. Also `Workspace.spec` is not restored, so Re-run on the
@@ -333,13 +382,13 @@ None fail tests; behaviours to fix or polish.
    in every run row** (`run.config.converter_spec` / `.mission_profile`); `reload_from_db`
    only has to read the latest run's config into `Workspace.spec` / `.profile`.
 2. **Catalog changes don't reach already-imported designs** (ratings resolved at BOM import).
-3. **Results screen `MarginBar` column** (col 9) usually scrolled out of view; Compare Runs
+3. ~~**Results screen `MarginBar` column**~~ fixed (120 px); was: (col 9) usually scrolled out of view; Compare Runs
    gives it a fixed 120 px width — do the same there.
-4. **`CircuitScreen._candidate_changed`** compares the first rail's net name — brittle.
-5. **Stress Table pin toggle silently no-ops** on non-manual rows.
+4. ~~**`CircuitScreen._candidate_changed`**~~ fixed (`MatchState.chosen_index`).
+5. ~~**Stress Table pin toggle silently no-ops**~~ now posts `UI_PIN_MANUAL_ONLY`.
 6. **Thermal produces no rows for Design C** (`THERMAL_NO_THETA`), so F2 never fires on the
    real board until θJA ratings are catalogued; Results shows "0 thermal rows" with no pointer.
-7. **GUI tests write real QSettings** (`HKCU\Software\EXDesigner\DfR Toolkit`).
+7. ~~**GUI tests write real QSettings**~~ fixed (temp INI fixture).
 8. **Git line-ending warnings** on commit for new text files; `.gitattributes` could declare
    `* text=auto eol=lf` except the byte-exact fixtures.
 9. `example_catalog.json` has placeholder ratings marked verify.
@@ -362,8 +411,7 @@ None fail tests; behaviours to fix or polish.
     half; needs test-cycle ratings `n_test, dt_test, f_test, tmax_test`), third-party
     `LifetimeModel` plugins (the ABC exists; M7 only runs `default_models`). M6 emits no
     rainflow bins (`ThermalResult.delta_tj_cycles` always empty): it has no mission phases.
-18. `Workspace.profile` is not restored on reopen (same root cause as item 1; data now in the
-    run row).
+18. ~~`Workspace.profile` is not restored on reopen~~ fixed.
 19. **M8 gaps**: `FailureRateModel` ABC (`dfr/core/extension.py`) is not consulted — M8 is
     table-driven only, third-party per-part models would need a `failure_rate.models` service
     hook; no k-of-n / parallel groups (PRD "could"); SR-332 Methods II/III (lab/field data
@@ -379,7 +427,20 @@ Session gotcha: running `ruff format` between two text-replacement edits changes
 text of the second edit. Make all replacements, then format. On this machine the venv is used
 from Git Bash as `.venv/Scripts/python -m …` (backslash paths fail there).
 
-## 6. Immediate next step: reopen fix, then T26–T28 (other topologies)
+## 6. Immediate next step (after this session)
+
+A. **T28 H-bridge** (`dfr/topologies/hbridge/`, PRD 3.2 H-bridge block: Im input, stall,
+   Vspike default 20 % verify) + Design B fixtures if the owner can supply real exports.
+B. **T39** refinement report section / recommended-change what-if (RPT-03/04).
+C. **T40** validation harness (reference waveform CSVs, validation table, uncertainty bands).
+D. Smaller gaps: answered prompts for template inputs (turns_ratio, l_primary, vd) store a T2
+   stress value but templates read *ratings*; either feed matching effective stress into
+   `part_inputs` or turn those prompts into rating edits. FMEA XLSX export (`openpyxl` not a
+   dependency). Pin-function inference for boost/flyback (`topology.inference` absent, so no
+   prefill). Isolated secondary grounds named e.g. `SGND` are not classified as ground (M1
+   regex), so flyback output caps there are not found.
+
+### Previous plan (kept for reference; A–C done this session)
 
 A. **Close open bug #1/#18 (small, high value now that the data exists):** in
    `Workspace.reload_from_db` read the newest run's `config.converter_spec` / `.mission_profile`

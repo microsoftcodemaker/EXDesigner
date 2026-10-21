@@ -21,7 +21,7 @@ class _Chip(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet(
             f"QLabel {{ color: {fg}; background: {bg}; border: 1px solid {fg}; border-radius: 3px;"
-            " padding: 0px 5px; font-weight: 600; }}"
+            " padding: 0px 5px; font-weight: 600; }"
         )
         if tooltip:
             self.setToolTip(tooltip)
@@ -83,6 +83,11 @@ class MarginBar(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
+        if self.ratio_t1 is None and self.ratio_t2 is None:  # no stress/limit: no bands either
+            painter.setPen(QPen(QColor(p.border), 1, Qt.PenStyle.DashLine))
+            painter.drawRect(0, 0, w - 1, h - 1)
+            painter.end()
+            return
         scale = w / (self.rating_ratio * 1.25)  # px per unit ratio; leaves room past FAIL
         painter.fillRect(0, 0, int(scale * 1.0), h, QColor(p.status.pass_))
         painter.fillRect(
@@ -120,7 +125,10 @@ class KeyValueGrid(QFrame):
             item = self._grid.takeAt(0)
             widget = item.widget() if item is not None else None
             if widget is not None:
+                widget.hide()  # deleteLater is deferred; never show stale rows meanwhile
                 widget.deleteLater()
+        for r in range(self._grid.rowCount()):
+            self._grid.setRowStretch(r, 0)
         for i, (k, v) in enumerate(rows):
             key = QLabel(k)
             key.setProperty("role", "muted")
